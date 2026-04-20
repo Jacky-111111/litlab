@@ -174,7 +174,7 @@ label {
 }
 
 .section {
-  margin: 2rem 0;
+  margin: 2rem auto;
 }
 
 .stack {
@@ -185,13 +185,21 @@ label {
 .dashboard-layout {
   display: grid;
   gap: 1rem;
-  grid-template-columns: 320px 1fr;
+  grid-template-columns: minmax(280px, 320px) minmax(620px, 860px);
+  justify-content: center;
+  align-items: start;
 }
 
 .project-layout {
   display: grid;
   grid-template-columns: 1fr;
   gap: 1rem;
+  width: min(1120px, 92vw);
+  margin: 0 auto;
+}
+
+.project-layout > * {
+  width: 100%;
 }
 
 .two-col {
