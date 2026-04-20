@@ -202,6 +202,32 @@ label {
   width: 100%;
 }
 
+.read-papers-layout .mini-card p {
+  margin: 0.4rem 0 0;
+}
+
+.read-papers-layout .mini-card a {
+  word-break: break-all;
+}
+
+.file-input-hidden {
+  display: none;
+}
+
+.file-picker-row {
+  margin-top: 0.3rem;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.file-picker-row #selected-pdf-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .two-col {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LitLab | Read Papers</title>
+    <link rel="icon" type="image/png" href="https://img.icons8.com/?size=100&id=aOIjONBdomrC&format=png&color=000000" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="config.js"></script>
+    <script defer src="app.js"></script>
+    <script defer src="read-papers.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="container">
+        <a class="brand" href="dashboard.html">LitLab</a>
+        <a class="button secondary" href="dashboard.html">Back to Dashboard</a>
+      </div>
+    </header>
+
+    <main class="container section project-layout read-papers-layout">
+      <section class="panel">
+        <h1>Read Papers</h1>
+        <p class="muted">
+          Paste a paper URL or upload a PDF. LitLab will generate overview, key terms explanation, domain,
+          author analysis, and related paper recommendations.
+        </p>
+        <p id="read-papers-message" class="message info">Ready to analyze a paper.</p>
+      </section>
+
+      <section class="two-col">
+        <article class="panel">
+          <h2>Analyze by URL</h2>
+          <form id="url-form">
+            <label>
+              Paper URL
+              <input name="paper_url" type="url" required placeholder="https://arxiv.org/abs/..." />
+            </label>
+            <button type="submit">Analyze URL</button>
+          </form>
+        </article>
+
+        <article class="panel">
+          <h2>Analyze by PDF</h2>
+          <form id="pdf-form">
+            <label>
+              Upload PDF
+              <input id="paper-pdf-input" class="file-input-hidden" name="paper_pdf" type="file" accept="application/pdf,.pdf" />
+              <div class="file-picker-row">
+                <button id="choose-pdf-btn" type="button" class="secondary">Choose File</button>
+                <span id="selected-pdf-name" class="muted">No file chosen</span>
+              </div>
+            </label>
+            <button type="submit">Analyze PDF</button>
+          </form>
+        </article>
+      </section>
+
+      <section class="panel">
+        <h2>Analysis Result</h2>
+        <div id="paper-meta" class="mini-card muted">No paper analyzed yet.</div>
+        <pre id="analysis-output" class="ai-output">Run an analysis to see results.</pre>
+      </section>
+
+      <section class="panel">
+        <h2>Related Paper Recommendations</h2>
+        <p id="related-query" class="muted"></p>
+        <div id="related-papers" class="stack"></div>
+      </section>
+    </main>
+  </body>
+</html>
