@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LitLab | Beginner Research Assistant</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script defer src="app.js"></script>
+    <script defer src="auth.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="container">
+        <a class="brand" href="index.html">LitLab</a>
+        <a class="button secondary" href="#auth">Get Started</a>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="hero">
+        <h1>Move from research confusion to structure.</h1>
+        <p>
+          LitLab helps beginner researchers create project plans, choose research
+          frameworks, discover papers, and understand difficult literature with
+          AI-powered summaries and quiz questions.
+        </p>
+        <div class="cta-row">
+          <a class="button" href="#auth">Sign Up / Log In</a>
+          <a class="button secondary" href="dashboard.html">Go to Dashboard</a>
+        </div>
+      </section>
+
+      <section class="section grid grid-3">
+        <article class="card">
+          <h3>1) Start a project</h3>
+          <p class="muted">Create your topic and choose IMRAD, Review, Theoretical, or Case Study.</p>
+        </article>
+        <article class="card">
+          <h3>2) Search and save papers</h3>
+          <p class="muted">Use Semantic Scholar search and build a project reading list.</p>
+        </article>
+        <article class="card">
+          <h3>3) Understand faster</h3>
+          <p class="muted">Generate summaries, beginner explanations, and conceptual quizzes.</p>
+        </article>
+      </section>
+
+      <section class="section" id="auth">
+        <article class="panel">
+          <h2 id="auth-mode-title">Log in to LitLab</h2>
+          <p id="auth-message" class="message info">Log in to continue your research projects.</p>
+          <form id="auth-form">
+            <label>
+              Email
+              <input type="email" name="email" required />
+            </label>
+            <label>
+              Password
+              <input type="password" name="password" required />
+            </label>
+            <div class="inline-actions">
+              <button id="auth-submit" type="submit">Log In</button>
+              <button class="secondary" id="mode-switch" type="button">Need an account? Sign up</button>
+            </div>
+          </form>
+          <div class="inline-actions">
+            <button id="start-btn" type="button" hidden>Open Dashboard</button>
+            <button id="logout-btn" type="button" class="danger" hidden>Log Out</button>
+          </div>
+        </article>
+      </section>
+
+      <div class="footer-space"></div>
+    </main>
+  </body>
+</html>

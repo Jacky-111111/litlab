@@ -1,0 +1,283 @@
+:root {
+  --bg: #f6f8fc;
+  --surface: #ffffff;
+  --text: #131722;
+  --muted: #5d6579;
+  --primary: #2158d9;
+  --primary-soft: #e7efff;
+  --danger: #c8354e;
+  --border: #dde4f2;
+  --shadow: 0 8px 24px rgba(20, 30, 60, 0.08);
+  --radius: 14px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.container {
+  width: min(1120px, 92vw);
+  margin: 0 auto;
+}
+
+.topbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.topbar .container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 70px;
+}
+
+.brand {
+  font-weight: 700;
+  font-size: 1.15rem;
+}
+
+.hero {
+  padding: 4rem 0 2.5rem;
+}
+
+.hero h1 {
+  font-size: clamp(1.9rem, 4vw, 3rem);
+  margin-bottom: 1rem;
+}
+
+.hero p {
+  color: var(--muted);
+  max-width: 700px;
+  line-height: 1.6;
+}
+
+.cta-row {
+  display: flex;
+  gap: 0.8rem;
+  margin-top: 1.4rem;
+}
+
+.grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.grid-3 {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+.grid-2 {
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+.card,
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1rem;
+}
+
+.panel h2 {
+  margin-top: 0;
+}
+
+button,
+.button {
+  border: 1px solid var(--primary);
+  background: var(--primary);
+  color: #fff;
+  border-radius: 10px;
+  padding: 0.6rem 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:hover,
+.button:hover {
+  background: #1c4cc0;
+}
+
+button.secondary,
+.secondary {
+  background: transparent;
+  color: var(--primary);
+}
+
+button.danger {
+  background: var(--danger);
+  border-color: var(--danger);
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.6rem 0.7rem;
+  font: inherit;
+  margin-top: 0.3rem;
+}
+
+label {
+  display: block;
+  margin-bottom: 0.8rem;
+  font-weight: 600;
+}
+
+.message {
+  margin: 0.8rem 0;
+  padding: 0.6rem 0.8rem;
+  border-radius: 10px;
+}
+
+.message.info {
+  background: #edf2ff;
+  color: #2c4376;
+}
+
+.message.success {
+  background: #e8f9ef;
+  color: #1e6d41;
+}
+
+.message.warning {
+  background: #fff5db;
+  color: #885b00;
+}
+
+.message.error {
+  background: #ffe9ee;
+  color: #9f1f39;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.section {
+  margin: 2rem 0;
+}
+
+.stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.dashboard-layout {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 320px 1fr;
+}
+
+.project-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.two-col {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
+}
+
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.project-actions,
+.paper-actions,
+.inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 0.8rem;
+}
+
+.badge {
+  font-size: 0.78rem;
+  border-radius: 999px;
+  padding: 0.25rem 0.55rem;
+  border: 1px solid transparent;
+}
+
+.badge.blue {
+  background: #e5eeff;
+  color: #1942a1;
+}
+
+.badge.teal {
+  background: #e8f8ff;
+  color: #15617c;
+}
+
+.badge.violet {
+  background: #efe9ff;
+  color: #52339f;
+}
+
+.badge.gray {
+  background: #eff1f6;
+  color: #4f5a75;
+}
+
+.mini-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.8rem;
+  margin-bottom: 0.75rem;
+  background: #fbfcff;
+}
+
+.mini-card h4 {
+  margin: 0 0 0.4rem;
+}
+
+.prompt {
+  margin-bottom: 0;
+}
+
+.note-block span {
+  font-size: 0.92rem;
+}
+
+pre.ai-output {
+  background: #0f1627;
+  color: #eaf0ff;
+  border-radius: 12px;
+  padding: 0.9rem;
+  white-space: pre-wrap;
+  min-height: 140px;
+}
+
+.footer-space {
+  height: 2.5rem;
+}
+
+@media (max-width: 900px) {
+  .dashboard-layout {
+    grid-template-columns: 1fr;
+  }
+}

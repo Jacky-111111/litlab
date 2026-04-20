@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LitLab | Dashboard</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script defer src="app.js"></script>
+    <script defer src="dashboard.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="container">
+        <a class="brand" href="index.html">LitLab</a>
+        <div class="inline-actions">
+          <span class="muted">Welcome, <strong id="user-email">researcher</strong></span>
+          <button id="logout-btn" class="danger" type="button">Log Out</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="container section dashboard-layout">
+      <section class="panel">
+        <h2>Create Project</h2>
+        <form id="create-project-form">
+          <label>
+            Title
+            <input name="title" type="text" required placeholder="e.g., Climate migration patterns" />
+          </label>
+          <label>
+            Description
+            <textarea name="description" rows="4" placeholder="What are you trying to learn?"></textarea>
+          </label>
+          <label>
+            Framework
+            <select name="framework_type" required>
+              <option value="IMRAD">IMRAD</option>
+              <option value="Review / Survey">Review / Survey</option>
+              <option value="Theoretical Paper">Theoretical Paper</option>
+              <option value="Case Study">Case Study</option>
+            </select>
+          </label>
+          <button type="submit">Create Project</button>
+        </form>
+        <p id="dashboard-message" class="message info">Ready to build your research plan.</p>
+      </section>
+
+      <section class="stack">
+        <article class="panel">
+          <h2>Your Projects</h2>
+          <p id="empty-state" class="muted">You have no projects yet.</p>
+          <div id="projects-grid" class="grid grid-2"></div>
+        </article>
+
+        <article class="panel">
+          <h2>Framework Quick Guide</h2>
+          <div class="grid grid-2">
+            <div class="mini-card"><strong>IMRAD</strong><p>Question → Method → Results → Discussion.</p></div>
+            <div class="mini-card"><strong>Review / Survey</strong><p>Compare sources and identify gaps.</p></div>
+            <div class="mini-card"><strong>Theoretical</strong><p>Build a claim and justify it with reasoning.</p></div>
+            <div class="mini-card"><strong>Case Study</strong><p>Analyze one context deeply and extract lessons.</p></div>
+          </div>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>
