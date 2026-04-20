@@ -7,6 +7,7 @@ const choosePdfBtn = document.getElementById("choose-pdf-btn");
 const selectedPdfNameEl = document.getElementById("selected-pdf-name");
 const messageEl = document.getElementById("read-papers-message");
 const paperMetaEl = document.getElementById("paper-meta");
+const analysisSectionsEl = document.getElementById("analysis-sections");
 const analysisOutputEl = document.getElementById("analysis-output");
 const relatedQueryEl = document.getElementById("related-query");
 const relatedPapersEl = document.getElementById("related-papers");
@@ -46,9 +47,100 @@ function renderPaperMeta(paper) {
   `;
 }
 
+function cleanInlineMarkdown(text) {
+  return String(text || "")
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .trim();
+}
+
+function parseAnalysisSections(markdown) {
+  const lines = String(markdown || "").split(/\r?\n/);
+  const sections = [];
+  let current = null;
+
+  for (const rawLine of lines) {
+    const headingMatch = rawLine.match(/^##\s*(.+)$/);
+    if (headingMatch) {
+      if (current) sections.push(current);
+      const normalizedTitle = cleanInlineMarkdown(headingMatch[1]).replace(/^\d+\)\s*/, "");
+      current = { title: normalizedTitle || "Analysis", lines: [] };
+      continue;
+    }
+
+    if (!current) {
+      current = { title: "Analysis", lines: [] };
+    }
+    current.lines.push(rawLine);
+  }
+
+  if (current) sections.push(current);
+  return sections.filter((section) => section.lines.some((line) => line.trim()));
+}
+
+function appendSectionBlocks(sectionEl, lines) {
+  for (let index = 0; index < lines.length; ) {
+    const raw = lines[index];
+    const trimmed = raw.trim();
+
+    if (!trimmed) {
+      index += 1;
+      continue;
+    }
+
+    if (/^[-*]\s+/.test(trimmed)) {
+      const listEl = document.createElement("ul");
+      while (index < lines.length && /^[-*]\s+/.test(lines[index].trim())) {
+        const liEl = document.createElement("li");
+        liEl.textContent = cleanInlineMarkdown(lines[index].trim().replace(/^[-*]\s+/, ""));
+        listEl.appendChild(liEl);
+        index += 1;
+      }
+      sectionEl.appendChild(listEl);
+      continue;
+    }
+
+    const paragraphParts = [cleanInlineMarkdown(trimmed)];
+    index += 1;
+    while (index < lines.length) {
+      const next = lines[index].trim();
+      if (!next || /^[-*]\s+/.test(next)) break;
+      paragraphParts.push(cleanInlineMarkdown(next));
+      index += 1;
+    }
+    const paragraphEl = document.createElement("p");
+    paragraphEl.textContent = paragraphParts.join(" ");
+    sectionEl.appendChild(paragraphEl);
+  }
+}
+
+function renderStructuredAnalysis(markdown) {
+  const sections = parseAnalysisSections(markdown);
+  analysisSectionsEl.innerHTML = "";
+
+  if (!sections.length) {
+    analysisSectionsEl.innerHTML = "<p class='muted'>No analysis returned.</p>";
+    return;
+  }
+
+  sections.forEach((section) => {
+    const sectionEl = document.createElement("article");
+    sectionEl.className = "mini-card analysis-card";
+
+    const titleEl = document.createElement("h3");
+    titleEl.textContent = section.title;
+    sectionEl.appendChild(titleEl);
+
+    appendSectionBlocks(sectionEl, section.lines);
+    analysisSectionsEl.appendChild(sectionEl);
+  });
+}
+
 function renderAnalysisResponse(payload) {
   renderPaperMeta(payload.paper || {});
-  analysisOutputEl.textContent = payload.analysis || "No analysis returned.";
+  const analysisText = payload.analysis || "No analysis returned.";
+  renderStructuredAnalysis(analysisText);
+  analysisOutputEl.textContent = analysisText;
   if (payload.recommendation_error) {
     relatedQueryEl.textContent = `Related papers unavailable: ${payload.recommendation_error}`;
   } else {
@@ -99,7 +191,8 @@ urlFormEl.addEventListener("submit", async (event) => {
   }
 
   setMessage("Analyzing paper URL...");
-  analysisOutputEl.textContent = "Analyzing...";
+  analysisSectionsEl.innerHTML = "<p class='muted'>Analyzing...</p>";
+  analysisOutputEl.textContent = "";
   relatedPapersEl.innerHTML = "";
   try {
     const payload = await window.LitLab.apiFetch("/ai/read-paper/url", {
@@ -109,6 +202,7 @@ urlFormEl.addEventListener("submit", async (event) => {
     renderAnalysisResponse(payload);
     setMessage("URL analysis completed.", "success");
   } catch (error) {
+    analysisSectionsEl.innerHTML = "<p class='muted'>No analysis returned.</p>";
     analysisOutputEl.textContent = "";
     relatedPapersEl.innerHTML = "";
     setMessage(error.message || "Could not analyze URL.", "error");
@@ -124,7 +218,8 @@ pdfFormEl.addEventListener("submit", async (event) => {
   }
 
   setMessage("Uploading PDF and generating analysis...");
-  analysisOutputEl.textContent = "Analyzing PDF...";
+  analysisSectionsEl.innerHTML = "<p class='muted'>Analyzing PDF...</p>";
+  analysisOutputEl.textContent = "";
   relatedPapersEl.innerHTML = "";
   try {
     const pdfBase64 = await fileToBase64(file);
@@ -138,6 +233,7 @@ pdfFormEl.addEventListener("submit", async (event) => {
     renderAnalysisResponse(payload);
     setMessage("PDF analysis completed.", "success");
   } catch (error) {
+    analysisSectionsEl.innerHTML = "<p class='muted'>No analysis returned.</p>";
     analysisOutputEl.textContent = "";
     relatedPapersEl.innerHTML = "";
     setMessage(error.message || "Could not analyze PDF.", "error");

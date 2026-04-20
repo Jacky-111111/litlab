@@ -48,6 +48,77 @@ def _guess_title_from_filename(filename: str) -> str:
     return _normalize_whitespace(title) or "Untitled paper"
 
 
+def _guess_authors_from_pdf_metadata(metadata: Any) -> list[str]:
+    if not metadata:
+        return []
+
+    author_raw = ""
+    for key in ("/Author", "Author", "author"):
+        value = getattr(metadata, "get", lambda *_args, **_kwargs: "")(key, "")
+        if value:
+            author_raw = str(value)
+            break
+    if not author_raw.strip():
+        return []
+
+    parts = re.split(r";| and |\n|, (?=[A-Z][a-z]+ [A-Z])", author_raw)
+    candidates = []
+    seen = set()
+    for part in parts:
+        name = _normalize_whitespace(part)
+        if not name or len(name) > 80:
+            continue
+        if not re.search(r"[A-Za-z]", name):
+            continue
+        key = name.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        candidates.append(name)
+    return candidates[:8]
+
+
+def _guess_authors_from_lines(lines: list[str], title: str) -> list[str]:
+    if not lines:
+        return []
+
+    title_index = 0
+    normalized_title = _normalize_whitespace(title).casefold()
+    for idx, line in enumerate(lines[:30]):
+        if normalized_title and normalized_title in _normalize_whitespace(line).casefold():
+            title_index = idx
+            break
+
+    author_window = lines[title_index + 1 : title_index + 8]
+    candidates: list[str] = []
+    for line in author_window:
+        normalized = _normalize_whitespace(line)
+        if len(normalized) > 140 or len(normalized) < 5:
+            continue
+        if re.search(r"\b(abstract|introduction|keywords|doi|university|department)\b", normalized, flags=re.IGNORECASE):
+            continue
+        if "@" in normalized or re.search(r"\d", normalized):
+            continue
+        if "," in normalized or " and " in normalized:
+            names = re.split(r",| and ", normalized)
+            for name in names:
+                cleaned = _normalize_whitespace(name)
+                if re.match(r"^[A-Z][A-Za-z\-']+(?:\s+[A-Z][A-Za-z\-']+){1,3}$", cleaned):
+                    candidates.append(cleaned)
+        elif re.match(r"^[A-Z][A-Za-z\-']+(?:\s+[A-Z][A-Za-z\-']+){1,3}$", normalized):
+            candidates.append(normalized)
+
+    deduped: list[str] = []
+    seen = set()
+    for name in candidates:
+        key = name.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(name)
+    return deduped[:8]
+
+
 def extract_paper_from_url(url: str) -> dict[str, Any]:
     clean_url = _normalize_whitespace(url)
     if not clean_url:
@@ -178,12 +249,15 @@ def extract_paper_from_pdf_bytes(
     )
     abstract = _normalize_whitespace(abstract_match.group(1)) if abstract_match else combined_text[:1400]
     year = _guess_year(combined_text)
+    metadata_authors = _guess_authors_from_pdf_metadata(reader.metadata)
+    line_authors = _guess_authors_from_lines(lines, title)
+    authors = metadata_authors or line_authors
 
     return {
         "external_paper_id": "",
         "source": "PDF Upload",
         "title": title,
-        "authors": [],
+        "authors": authors,
         "year": year,
         "abstract": abstract,
         "url": source_url,

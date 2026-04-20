@@ -58,6 +58,7 @@ def read_paper_analysis_prompt(
     year: int | None,
     source: str,
     source_url: str = "",
+    author_background: str = "",
 ) -> str:
     return f"""
 You are LitLab AI, helping a beginner researcher deeply but clearly understand one paper.
@@ -71,6 +72,8 @@ Paper metadata:
 - URL: {source_url or "Unknown"}
 - Abstract / extracted content:
 {paper_abstract or "No abstract or content was provided."}
+- Author background lookup (best effort):
+{author_background or "No reliable external author profile found."}
 
 Return exactly 6 sections using markdown headings:
 ## 1) Paper Overview
@@ -86,7 +89,8 @@ Provide 5-10 key terms with one-sentence beginner-friendly definitions.
 Identify the likely research field/subfield and explain why.
 
 ## 5) Author Analysis
-Based only on available evidence, analyze author perspective, likely expertise signals, and possible blind spots.
+Use both paper content and author background lookup (if available) to analyze likely expertise, perspective, and possible blind spots.
+If lookup data is unavailable, explicitly say the limitation.
 
 ## 6) Suggested Next Reads
 Recommend what kind of papers should be read next (methods paper, survey, replication, etc.) and why.

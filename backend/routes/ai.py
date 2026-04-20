@@ -14,12 +14,12 @@ try:
     )
     from ..services.openai_service import generate_text
     from ..services.paper_reader_service import extract_paper_from_pdf_bytes, extract_paper_from_url
-    from ..services.paper_search_service import search_papers
+    from ..services.paper_search_service import search_author_profiles, search_papers
 except ImportError:
     from prompts.paper_prompts import explain_prompt, quiz_prompt, read_paper_analysis_prompt, summary_prompt
     from services.openai_service import generate_text
     from services.paper_reader_service import extract_paper_from_pdf_bytes, extract_paper_from_url
-    from services.paper_search_service import search_papers
+    from services.paper_search_service import search_author_profiles, search_papers
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -131,6 +131,72 @@ def _recommend_related_papers(paper: PaperContext) -> dict:
     return {"query": related_query, "papers": deduped[:5]}
 
 
+def _normalize_title(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "", (text or "").lower())
+
+
+def _enrich_paper_authors(paper: PaperContext) -> PaperContext:
+    if paper.authors:
+        return paper
+    if not paper.title.strip():
+        return paper
+
+    try:
+        candidates = search_papers(paper.title, limit=5)
+    except HTTPException:
+        return paper
+
+    target = _normalize_title(paper.title)
+    if not target:
+        return paper
+
+    best_authors: list[str] = []
+    for item in candidates:
+        candidate_title = _normalize_title(item.get("title", ""))
+        if not candidate_title:
+            continue
+        if candidate_title == target or target in candidate_title or candidate_title in target:
+            best_authors = item.get("authors") or []
+            if best_authors:
+                break
+
+    if not best_authors and candidates:
+        best_authors = candidates[0].get("authors") or []
+
+    if best_authors:
+        paper.authors = best_authors[:8]
+    return paper
+
+
+def _build_author_background_text(author_profiles: list[dict]) -> str:
+    if not author_profiles:
+        return ""
+
+    lines = []
+    for profile in author_profiles[:6]:
+        affiliations = ", ".join(profile.get("affiliations") or []) or "Unknown affiliation"
+        h_index = profile.get("h_index")
+        citation_count = profile.get("citation_count")
+        paper_count = profile.get("paper_count")
+        metrics = []
+        if h_index is not None:
+            metrics.append(f"h-index {h_index}")
+        if citation_count is not None:
+            metrics.append(f"{citation_count} citations")
+        if paper_count is not None:
+            metrics.append(f"{paper_count} papers")
+        metric_text = "; ".join(metrics) if metrics else "limited metrics"
+
+        lines.append(f"- {profile.get('name', profile.get('queried_name', 'Unknown'))}: {affiliations}; {metric_text}")
+    return "\n".join(lines)
+
+
+def _enrich_author_profiles(paper: PaperContext) -> list[dict]:
+    if not paper.authors:
+        return []
+    return search_author_profiles(paper.authors, per_author_limit=1)
+
+
 @router.post("/recommend")
 def recommend(payload: AIPaperRequest) -> dict:
     if not f"{payload.paper.title} {payload.paper.abstract}".strip():
@@ -142,7 +208,9 @@ def recommend(payload: AIPaperRequest) -> dict:
 
 
 def _build_read_paper_response(paper_data: dict) -> dict:
-    paper = PaperContext(**paper_data)
+    paper = _enrich_paper_authors(PaperContext(**paper_data))
+    author_profiles = _enrich_author_profiles(paper)
+    author_background = _build_author_background_text(author_profiles)
     analysis = generate_text(
         read_paper_analysis_prompt(
             paper_title=paper.title,
@@ -151,11 +219,13 @@ def _build_read_paper_response(paper_data: dict) -> dict:
             year=paper.year,
             source=paper.source or "Unknown",
             source_url=paper.url,
+            author_background=author_background,
         )
     )
     response_payload: dict = {
         "paper": paper.model_dump(),
         "analysis": analysis,
+        "author_profiles": author_profiles,
         "query": "",
         "papers": [],
     }

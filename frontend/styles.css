@@ -228,6 +228,42 @@ label {
   white-space: nowrap;
 }
 
+.analysis-sections {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 0.8rem;
+}
+
+.analysis-card {
+  margin-bottom: 0;
+}
+
+.analysis-card h3 {
+  margin: 0 0 0.55rem;
+  font-size: 1rem;
+}
+
+.analysis-card p {
+  margin: 0.45rem 0;
+  line-height: 1.6;
+}
+
+.analysis-card ul {
+  margin: 0.45rem 0;
+  padding-left: 1.1rem;
+  line-height: 1.5;
+}
+
+.analysis-raw {
+  margin-top: 0.8rem;
+}
+
+.analysis-raw summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-weight: 600;
+}
+
 .two-col {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -303,7 +339,7 @@ pre.ai-output {
   border-radius: 12px;
   padding: 0.9rem;
   white-space: pre-wrap;
-  min-height: 140px;
+  min-height: 100px;
 }
 
 .footer-space {
