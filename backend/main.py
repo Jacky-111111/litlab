@@ -6,9 +6,15 @@ from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 
-from routes.ai import router as ai_router
-from routes.papers import router as papers_router
-from routes.projects import router as projects_router
+try:
+    from .routes.ai import router as ai_router
+    from .routes.papers import router as papers_router
+    from .routes.projects import router as projects_router
+except ImportError:
+    # Local fallback when running `uvicorn main:app` inside `backend/`.
+    from routes.ai import router as ai_router
+    from routes.papers import router as papers_router
+    from routes.projects import router as projects_router
 
 
 def create_app() -> FastAPI:

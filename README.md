@@ -130,6 +130,30 @@ python3 -m http.server 5500
 
 Open [http://127.0.0.1:5500/index.html](http://127.0.0.1:5500/index.html)
 
+## Deploy on Vercel
+
+This repo is configured to deploy both frontend and backend from one Vercel project:
+
+- Static frontend pages are served from `frontend/`.
+- FastAPI backend is served from `api/index.py` and exposed at `/api/*`.
+
+Recommended deploy flow:
+
+```bash
+vercel link
+vercel
+vercel --prod
+```
+
+After deployment, ensure these environment variables are set in Vercel Project Settings:
+
+- `OPENAI_API_KEY`
+- `OPENAI_MODEL` (optional)
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `CORS_ORIGINS` (optional; if unset, same-origin `/api` calls still work)
+
 ## Important Notes
 
 - OpenAI key is only used on backend; do not expose it in frontend code.

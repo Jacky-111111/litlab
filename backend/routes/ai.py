@@ -4,9 +4,14 @@ from collections import Counter
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
-from prompts.paper_prompts import explain_prompt, quiz_prompt, summary_prompt
-from services.openai_service import generate_text
-from services.paper_search_service import search_papers
+try:
+    from ..prompts.paper_prompts import explain_prompt, quiz_prompt, summary_prompt
+    from ..services.openai_service import generate_text
+    from ..services.paper_search_service import search_papers
+except ImportError:
+    from prompts.paper_prompts import explain_prompt, quiz_prompt, summary_prompt
+    from services.openai_service import generate_text
+    from services.paper_search_service import search_papers
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 

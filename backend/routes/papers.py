@@ -3,13 +3,22 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
-from services.paper_search_service import search_papers
-from services.supabase_service import (
-    get_current_user_id,
-    get_project_for_user,
-    list_saved_papers,
-    save_paper,
-)
+try:
+    from ..services.paper_search_service import search_papers
+    from ..services.supabase_service import (
+        get_current_user_id,
+        get_project_for_user,
+        list_saved_papers,
+        save_paper,
+    )
+except ImportError:
+    from services.paper_search_service import search_papers
+    from services.supabase_service import (
+        get_current_user_id,
+        get_project_for_user,
+        list_saved_papers,
+        save_paper,
+    )
 
 router = APIRouter(tags=["papers"])
 
