@@ -22,8 +22,7 @@ function projectCardTemplate(project) {
       </div>
       <p class="muted">${project.description || "No description yet."}</p>
       <div class="project-actions">
-        <button data-action="open" data-id="${project.id}">Open</button>
-        <button data-action="edit" data-id="${project.id}" class="secondary">Edit</button>
+        <button data-action="open" data-id="${project.id}">Manage</button>
         <button data-action="delete" data-id="${project.id}" class="danger">Delete</button>
       </div>
     </article>
@@ -85,23 +84,6 @@ projectsGridEl.addEventListener("click", async (event) => {
     return;
   }
 
-  if (action === "edit") {
-    const nextTitle = window.prompt("New project title:");
-    if (!nextTitle) return;
-    const nextDescription = window.prompt("New project description (optional):") || "";
-    try {
-      await window.LitLab.apiFetch(`/projects/${projectId}`, {
-        method: "PUT",
-        body: JSON.stringify({ title: nextTitle, description: nextDescription }),
-      });
-      setMessage("Project updated.", "success");
-      await loadProjects();
-    } catch (error) {
-      setMessage(error.message || "Could not update project.", "error");
-    }
-    return;
-  }
-
   if (action === "delete") {
     const confirmed = window.confirm("Delete this project and its context?");
     if (!confirmed) return;
@@ -126,5 +108,20 @@ logoutButtonEl.addEventListener("click", async () => {
   window.location.href = "index.html";
 });
 
-userEmailEl.textContent = localStorage.getItem("litlab_user_email") || "researcher";
+async function loadWelcomeIdentity() {
+  const fallbackEmail = localStorage.getItem("litlab_user_email") || "researcher";
+  userEmailEl.textContent = fallbackEmail;
+
+  try {
+    const response = await window.LitLab.apiFetch("/account/profile");
+    const profile = response.profile || {};
+    const nickname = String(profile.nickname || "").trim();
+    const email = String(profile.email || fallbackEmail).trim();
+    userEmailEl.textContent = nickname || email || "researcher";
+  } catch (_error) {
+    // Keep fallback value when account profile is unavailable.
+  }
+}
+
+loadWelcomeIdentity();
 loadProjects();
