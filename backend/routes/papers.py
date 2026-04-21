@@ -209,17 +209,36 @@ def put_paper_url(
 
 
 @router.get("/papers/{paper_id}/pdf-download-url")
-def get_paper_pdf_download_url(paper_id: str, user_id: str = Depends(get_current_user_id)) -> dict:
+def get_paper_pdf_download_url(
+    paper_id: str,
+    mode: str = Query("download", pattern="^(view|download)$"),
+    user_id: str = Depends(get_current_user_id),
+) -> dict:
     paper = get_paper_for_user(paper_id, user_id)
     if not paper:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Paper not found.")
     pdf_storage_path = str(paper.get("pdf_storage_path") or "").strip()
     if not pdf_storage_path:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No PDF file saved for this paper.")
-    signed_url = create_signed_pdf_url(pdf_storage_path, expires_in_seconds=3600)
+
+    download_filename: str | None = None
+    if mode == "download":
+        base_name = pdf_storage_path.rsplit("/", 1)[-1]
+        # Strip the "<16-char-hash>-" prefix that upload_pdf_for_user adds, when present.
+        if len(base_name) > 17 and base_name[16] == "-":
+            candidate = base_name[17:]
+            if candidate:
+                base_name = candidate
+        download_filename = base_name or "paper.pdf"
+
+    signed_url = create_signed_pdf_url(
+        pdf_storage_path,
+        expires_in_seconds=3600,
+        download_filename=download_filename,
+    )
     if not signed_url:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Could not generate PDF download URL.")
-    return {"download_url": signed_url, "expires_in_seconds": 3600}
+    return {"download_url": signed_url, "expires_in_seconds": 3600, "mode": mode}
 
 
 @router.post("/collections/{collection_id}/papers:batchAdd")

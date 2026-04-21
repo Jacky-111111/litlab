@@ -677,13 +677,27 @@ def download_pdf_from_storage(object_path: str) -> bytes | None:
     return data if isinstance(data, bytes) and data else None
 
 
-def create_signed_pdf_url(object_path: str, expires_in_seconds: int = 3600) -> str | None:
+def create_signed_pdf_url(
+    object_path: str,
+    expires_in_seconds: int = 3600,
+    download_filename: str | None = None,
+) -> str | None:
     if not object_path:
         return None
     client = _require_supabase()
     bucket = os.getenv("SUPABASE_PDF_BUCKET", "paper-pdfs")
     try:
-        response = client.storage.from_(bucket).create_signed_url(path=object_path, expires_in=expires_in_seconds)
+        if download_filename:
+            response = client.storage.from_(bucket).create_signed_url(
+                path=object_path,
+                expires_in=expires_in_seconds,
+                options={"download": download_filename},
+            )
+        else:
+            response = client.storage.from_(bucket).create_signed_url(
+                path=object_path,
+                expires_in=expires_in_seconds,
+            )
     except Exception:  # noqa: BLE001
         return None
 

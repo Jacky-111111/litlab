@@ -96,10 +96,12 @@ function renderSavedSourceInfo(paper) {
   const lines = [];
   lines.push(`<p><strong>Saved URL:</strong> ${url || "Not saved"}</p>`);
   lines.push(`<p><strong>Saved PDF:</strong> ${pdfPath || "Not saved"}</p>`);
+  const pdfButtonsDisabled = pdfPath && currentPaperId ? "" : "disabled";
   lines.push(
     `<div class="inline-actions">
       <button type="button" class="secondary" data-source-action="copy-url" ${url ? "" : "disabled"}>Copy URL</button>
-      <button type="button" class="secondary" data-source-action="download-pdf" ${pdfPath && currentPaperId ? "" : "disabled"}>Download PDF</button>
+      <button type="button" class="secondary" data-source-action="view-pdf" ${pdfButtonsDisabled}>View PDF</button>
+      <button type="button" class="secondary" data-source-action="download-pdf" ${pdfButtonsDisabled}>Download PDF</button>
     </div>`
   );
   savedSourceInfoEl.classList.remove("muted");
@@ -647,19 +649,48 @@ savedSourceInfoEl.addEventListener("click", async (event) => {
     return;
   }
 
+  if (action === "view-pdf") {
+    if (!currentPaperId) {
+      setMessage("No saved paper selected.", "warning");
+      return;
+    }
+    try {
+      const payload = await window.LitLab.apiFetch(
+        `/papers/${currentPaperId}/pdf-download-url?mode=view`
+      );
+      const viewUrl = payload.download_url || "";
+      if (!viewUrl) {
+        setMessage("Could not get PDF view URL.", "error");
+        return;
+      }
+      window.open(viewUrl, "_blank", "noopener,noreferrer");
+    } catch (error) {
+      setMessage(error.message || "Could not open saved PDF.", "error");
+    }
+    return;
+  }
+
   if (action === "download-pdf") {
     if (!currentPaperId) {
       setMessage("No saved paper selected.", "warning");
       return;
     }
     try {
-      const payload = await window.LitLab.apiFetch(`/papers/${currentPaperId}/pdf-download-url`);
+      const payload = await window.LitLab.apiFetch(
+        `/papers/${currentPaperId}/pdf-download-url?mode=download`
+      );
       const downloadUrl = payload.download_url || "";
       if (!downloadUrl) {
         setMessage("Could not get PDF download URL.", "error");
         return;
       }
-      window.open(downloadUrl, "_blank", "noopener,noreferrer");
+      const anchor = document.createElement("a");
+      anchor.href = downloadUrl;
+      anchor.rel = "noopener noreferrer";
+      anchor.target = "_blank";
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
       setMessage("PDF download started.", "success");
     } catch (error) {
       setMessage(error.message || "Could not download saved PDF.", "error");

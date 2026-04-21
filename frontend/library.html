@@ -25,23 +25,6 @@
         <p id="library-message" class="message info">Loading your papers...</p>
       </section>
 
-      <section class="panel library-toolbar">
-        <form id="library-search-form" class="library-search-form">
-          <label class="library-search-label" for="library-search-input">Research Search</label>
-          <div class="library-search-row">
-            <input
-              id="library-search-input"
-              name="query"
-              type="text"
-              placeholder="Search by paper title or nickname"
-              autocomplete="off"
-            />
-            <button id="clear-search-btn" type="button" class="secondary">Clear</button>
-            <button type="submit">Search</button>
-          </div>
-        </form>
-      </section>
-
       <section class="library-workspace">
         <aside class="panel library-sidebar">
           <h2>View</h2>
@@ -49,13 +32,32 @@
           <div id="library-filter-menu" class="library-filter-menu"></div>
         </aside>
 
-        <section class="panel library-results-panel">
-          <div class="library-results-head">
-            <h2 id="library-results-title">All Papers</h2>
-            <p id="library-results-meta" class="muted"></p>
-          </div>
-          <div id="library-papers" class="stack"></div>
-        </section>
+        <div class="library-main-column">
+          <section class="panel library-toolbar">
+            <form id="library-search-form" class="library-search-form">
+              <label class="library-search-label" for="library-search-input">Research Search</label>
+              <div class="library-search-row">
+                <input
+                  id="library-search-input"
+                  name="query"
+                  type="text"
+                  placeholder="Search by paper title or nickname"
+                  autocomplete="off"
+                />
+                <button id="clear-search-btn" type="button" class="secondary">Clear</button>
+                <button type="submit">Search</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="panel library-results-panel">
+            <div class="library-results-head">
+              <h2 id="library-results-title">All Papers</h2>
+              <p id="library-results-meta" class="muted"></p>
+            </div>
+            <div id="library-papers" class="stack"></div>
+          </section>
+        </div>
       </section>
     </main>
   </body>
