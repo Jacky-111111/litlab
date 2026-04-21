@@ -38,22 +38,33 @@
         </article>
 
         <article class="panel">
-          <h2>My Literature Library</h2>
-          <p class="muted">All papers you have added are centralized here and can be managed across collections.</p>
+          <h2>My Paper Library</h2>
+          <p class="muted">
+            All papers you have added live here. Collections are reusable reading lists that
+            organize subsets of your library; a project's primary collection shows a badge.
+          </p>
           <p id="library-summary" class="message info">Loading library overview...</p>
-          <div id="library-preview" class="stack"></div>
+
+          <div class="library-dashboard-split">
+            <section class="library-split-col">
+              <div class="card-head">
+                <h3>Recent papers</h3>
+              </div>
+              <div id="library-preview" class="stack"></div>
+            </section>
+
+            <section class="library-split-col">
+              <div class="card-head">
+                <h3>Collections</h3>
+              </div>
+              <p id="collections-empty-state" class="muted" hidden>No collections yet.</p>
+              <div id="collections-grid" class="stack"></div>
+            </section>
+          </div>
+
           <div class="inline-actions">
             <a class="button" href="library.html">Manage Library</a>
           </div>
-        </article>
-
-        <article class="panel">
-          <h2>Your Collections</h2>
-          <p class="muted">
-            Collections are reusable reading lists. A project's primary collection shows a badge.
-          </p>
-          <p id="collections-empty-state" class="muted" hidden>No collections yet.</p>
-          <div id="collections-grid" class="grid grid-2"></div>
         </article>
 
         <article class="panel">
@@ -84,5 +95,33 @@
         </article>
       </section>
     </main>
+
+    <dialog id="collection-settings-dialog" class="dialog">
+      <form id="collection-settings-form" method="dialog" class="dialog-form">
+        <h3>Collection Settings</h3>
+        <input type="hidden" name="collection_id" />
+        <label>
+          Title
+          <input name="title" type="text" required maxlength="200" />
+        </label>
+        <label>
+          Description
+          <textarea name="description" rows="3" maxlength="4000" placeholder="What is this collection for?"></textarea>
+        </label>
+        <label>
+          Visibility
+          <select name="visibility">
+            <option value="private">Private (only you)</option>
+            <option value="link">Link (anyone with the share link)</option>
+            <option value="public">Public (discoverable)</option>
+          </select>
+        </label>
+        <p id="collection-settings-message" class="message info" hidden></p>
+        <div class="dialog-actions">
+          <button type="button" class="secondary" data-dialog-action="cancel">Cancel</button>
+          <button type="submit">Save</button>
+        </div>
+      </form>
+    </dialog>
   </body>
 </html>

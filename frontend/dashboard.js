@@ -9,6 +9,12 @@ const librarySummaryEl = document.getElementById("library-summary");
 const libraryPreviewEl = document.getElementById("library-preview");
 const collectionsGridEl = document.getElementById("collections-grid");
 const collectionsEmptyEl = document.getElementById("collections-empty-state");
+const collectionSettingsDialogEl = document.getElementById("collection-settings-dialog");
+const collectionSettingsFormEl = document.getElementById("collection-settings-form");
+const collectionSettingsMessageEl = document.getElementById("collection-settings-message");
+
+let collectionsCache = [];
+let primaryCollectionIdSet = new Set();
 
 const escapeHtml = (value) =>
   String(value ?? "")
@@ -89,7 +95,7 @@ function collectionCardTemplate(collection, paperCount, isPrimaryForAnyProject) 
     ? `<p class="muted">${escapeHtml(collection.description)}</p>`
     : "";
   return `
-    <article class="card collection-card">
+    <article class="card collection-card" data-collection-id="${escapeHtml(collection.id)}">
       <div class="card-head">
         <h3>${escapeHtml(collection.title || "Untitled collection")}</h3>
         <span class="badge ${visibilityClass}">${escapeHtml(visibility)}</span>
@@ -99,8 +105,10 @@ function collectionCardTemplate(collection, paperCount, isPrimaryForAnyProject) 
         <span class="badge gray">${countLabel}</span>
         ${primaryBadge}
       </p>
-      <div class="project-actions">
+      <div class="project-actions collection-actions">
         <a class="button secondary" href="library.html">Open in Library</a>
+        <button type="button" class="secondary" data-action="collection-settings" data-id="${escapeHtml(collection.id)}">Manage Settings</button>
+        <button type="button" class="danger" data-action="collection-delete" data-id="${escapeHtml(collection.id)}">Delete</button>
       </div>
     </article>
   `;
@@ -204,9 +212,11 @@ async function loadCollections() {
   try {
     const response = await window.LitLab.apiFetch("/collections");
     const collections = response.collections || [];
+    collectionsCache = collections;
     if (!collections.length) {
       collectionsGridEl.innerHTML = "";
       collectionsEmptyEl.hidden = false;
+      primaryCollectionIdSet = new Set();
       return;
     }
     collectionsEmptyEl.hidden = true;
@@ -218,6 +228,7 @@ async function loadCollections() {
       Promise.all(collections.map((collection) => fetchCollectionPaperCount(collection.id))),
       fetchPrimaryCollectionIdsByProject(),
     ]);
+    primaryCollectionIdSet = primarySet;
     collectionsGridEl.innerHTML = collections
       .map((collection, index) =>
         collectionCardTemplate(collection, counts[index], primarySet.has(collection.id))
@@ -254,6 +265,109 @@ projectsGridEl.addEventListener("click", async (event) => {
       await Promise.all([loadProjects(), loadCollections()]);
     } catch (error) {
       setMessage(error.message || "Could not delete project.", "error");
+    }
+  }
+});
+
+function setCollectionDialogMessage(text, tone = "info") {
+  if (!collectionSettingsMessageEl) return;
+  if (!text) {
+    collectionSettingsMessageEl.textContent = "";
+    collectionSettingsMessageEl.hidden = true;
+    return;
+  }
+  collectionSettingsMessageEl.textContent = text;
+  collectionSettingsMessageEl.className = `message ${tone}`;
+  collectionSettingsMessageEl.hidden = false;
+}
+
+function openCollectionSettings(collectionId) {
+  const collection = collectionsCache.find((c) => c.id === collectionId);
+  if (!collection || !collectionSettingsDialogEl || !collectionSettingsFormEl) return;
+  collectionSettingsFormEl.elements.collection_id.value = collection.id;
+  collectionSettingsFormEl.elements.title.value = collection.title || "";
+  collectionSettingsFormEl.elements.description.value = collection.description || "";
+  collectionSettingsFormEl.elements.visibility.value = collection.visibility || "private";
+  setCollectionDialogMessage("");
+  if (typeof collectionSettingsDialogEl.showModal === "function") {
+    collectionSettingsDialogEl.showModal();
+  } else {
+    collectionSettingsDialogEl.setAttribute("open", "");
+  }
+}
+
+function closeCollectionSettings() {
+  if (!collectionSettingsDialogEl) return;
+  if (typeof collectionSettingsDialogEl.close === "function") {
+    collectionSettingsDialogEl.close();
+  } else {
+    collectionSettingsDialogEl.removeAttribute("open");
+  }
+}
+
+collectionSettingsFormEl?.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLButtonElement)) return;
+  if (target.dataset.dialogAction === "cancel") {
+    event.preventDefault();
+    closeCollectionSettings();
+  }
+});
+
+collectionSettingsFormEl?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const formData = new FormData(collectionSettingsFormEl);
+  const collectionId = String(formData.get("collection_id") || "").trim();
+  const title = String(formData.get("title") || "").trim();
+  const description = String(formData.get("description") || "").trim();
+  const visibility = String(formData.get("visibility") || "private");
+  if (!collectionId) return;
+  if (!title) {
+    setCollectionDialogMessage("Title cannot be empty.", "error");
+    return;
+  }
+  setCollectionDialogMessage("Saving...");
+  try {
+    await window.LitLab.apiFetch(`/collections/${collectionId}`, {
+      method: "PUT",
+      body: JSON.stringify({ title, description, visibility }),
+    });
+    setCollectionDialogMessage("Saved.", "success");
+    closeCollectionSettings();
+    await loadCollections();
+  } catch (error) {
+    setCollectionDialogMessage(error.message || "Could not save collection.", "error");
+  }
+});
+
+collectionsGridEl.addEventListener("click", async (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLButtonElement)) return;
+  const action = target.dataset.action;
+  const collectionId = target.dataset.id;
+  if (!action || !collectionId) return;
+
+  if (action === "collection-settings") {
+    openCollectionSettings(collectionId);
+    return;
+  }
+
+  if (action === "collection-delete") {
+    const collection = collectionsCache.find((c) => c.id === collectionId);
+    const isPrimary = primaryCollectionIdSet.has(collectionId);
+    const label = collection?.title || "this collection";
+    const extra = isPrimary
+      ? " It is currently a project's primary reading list — deleting it will leave that project without a primary list until you attach another."
+      : "";
+    const confirmed = window.confirm(
+      `Delete "${label}"? Papers stay in your Library and are not removed.${extra}`
+    );
+    if (!confirmed) return;
+    try {
+      await window.LitLab.apiFetch(`/collections/${collectionId}`, { method: "DELETE" });
+      await Promise.all([loadCollections(), loadLibraryOverview(), loadProjects()]);
+    } catch (error) {
+      window.alert(error.message || "Could not delete collection.");
     }
   }
 });

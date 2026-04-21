@@ -326,6 +326,31 @@ label {
   margin: 0 auto;
 }
 
+.library-dashboard-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.library-split-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.library-split-col h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+@media (max-width: 860px) {
+  .library-dashboard-split {
+    grid-template-columns: 1fr;
+  }
+}
+
 .project-row-main {
   display: flex;
   align-items: center;
@@ -406,6 +431,104 @@ label {
 .paper-picker-meta {
   margin: 0.35rem 0 0 1.55rem;
   font-size: 0.88rem;
+}
+
+.collection-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.dialog {
+  border: none;
+  border-radius: 12px;
+  padding: 0;
+  width: min(520px, 92vw);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+}
+
+.dialog::backdrop {
+  background: rgba(15, 23, 42, 0.5);
+}
+
+.dialog-form {
+  display: grid;
+  gap: 0.8rem;
+  padding: 1.2rem 1.3rem 1.1rem;
+  margin: 0;
+}
+
+.dialog-form h3 {
+  margin: 0 0 0.2rem;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.3rem;
+}
+
+.toggle-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: pointer;
+  user-select: none;
+  margin: 0;
+}
+
+.toggle-switch input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+}
+
+.toggle-switch-track {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+  background: #d1d5db;
+  border-radius: 999px;
+  transition: background 0.2s ease;
+}
+
+.toggle-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s ease;
+}
+
+.toggle-switch input[type="checkbox"]:checked + .toggle-switch-track {
+  background: #2563eb;
+}
+
+.toggle-switch input[type="checkbox"]:checked + .toggle-switch-track .toggle-switch-thumb {
+  transform: translateX(20px);
+}
+
+.toggle-switch input[type="checkbox"]:focus-visible + .toggle-switch-track {
+  outline: 2px solid rgba(37, 99, 235, 0.45);
+  outline-offset: 2px;
+}
+
+.toggle-switch input[type="checkbox"]:disabled + .toggle-switch-track {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.toggle-switch-label {
+  font-weight: 500;
 }
 
 .project-layout {

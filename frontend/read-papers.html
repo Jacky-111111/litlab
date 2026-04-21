@@ -68,9 +68,12 @@
 
           <section class="panel">
             <h2>Save into Library</h2>
-            <label class="checkbox-inline">
-              <input id="persist-to-library" type="checkbox" checked />
-              Keep this paper in my Library
+            <label class="toggle-switch" for="persist-to-library">
+              <input id="persist-to-library" type="checkbox" role="switch" checked />
+              <span class="toggle-switch-track" aria-hidden="true">
+                <span class="toggle-switch-thumb"></span>
+              </span>
+              <span class="toggle-switch-label">Keep this paper in my Library</span>
             </label>
             <p id="library-membership-status" class="muted">
               Save this paper to Library, then choose which collections it belongs to.
