@@ -9,19 +9,19 @@ try:
     from ..services.paper_search_service import search_papers
     from ..services.supabase_service import (
         add_paper_to_collection,
-        batch_add_papers_to_collection,
-        batch_remove_papers_from_collection,
         create_or_update_paper_for_user,
         create_signed_pdf_url,
         delete_paper_for_user,
         get_current_user_id,
         get_or_update_paper_note,
         get_paper_for_user,
+        get_primary_collection_for_project,
         get_project_for_user,
         list_collection_ids_for_paper,
+        list_collections_for_project,
         list_papers_for_user,
-        list_saved_papers,
-        save_paper,
+        list_papers_in_collection,
+        save_paper_to_collection,
         upload_pdf_for_user,
         update_paper_nickname_for_user,
         update_paper_url_for_user,
@@ -31,19 +31,19 @@ except ImportError:
     from services.paper_search_service import search_papers
     from services.supabase_service import (
         add_paper_to_collection,
-        batch_add_papers_to_collection,
-        batch_remove_papers_from_collection,
         create_or_update_paper_for_user,
         create_signed_pdf_url,
         delete_paper_for_user,
         get_current_user_id,
         get_or_update_paper_note,
         get_paper_for_user,
+        get_primary_collection_for_project,
         get_project_for_user,
         list_collection_ids_for_paper,
+        list_collections_for_project,
         list_papers_for_user,
-        list_saved_papers,
-        save_paper,
+        list_papers_in_collection,
+        save_paper_to_collection,
         upload_pdf_for_user,
         update_paper_nickname_for_user,
         update_paper_url_for_user,
@@ -78,10 +78,6 @@ class IngestPaperRequest(BaseModel):
     filename: str = "uploaded.pdf"
     pdf_base64: str = ""
     collection_ids: list[str] = Field(default_factory=list)
-
-
-class BatchCollectionRequest(BaseModel):
-    paper_ids: list[str] = Field(default_factory=list)
 
 
 class PaperNoteRequest(BaseModel):
@@ -241,40 +237,36 @@ def get_paper_pdf_download_url(
     return {"download_url": signed_url, "expires_in_seconds": 3600, "mode": mode}
 
 
-@router.post("/collections/{collection_id}/papers:batchAdd")
-def batch_add_collection_papers(
-    collection_id: str,
-    payload: BatchCollectionRequest,
-    user_id: str = Depends(get_current_user_id),
-) -> dict:
-    added = batch_add_papers_to_collection(collection_id, payload.paper_ids, user_id)
-    return {"added": added}
-
-
-@router.post("/collections/{collection_id}/papers:batchRemove")
-def batch_remove_collection_papers(
-    collection_id: str,
-    payload: BatchCollectionRequest,
-    user_id: str = Depends(get_current_user_id),
-) -> dict:
-    removed = batch_remove_papers_from_collection(collection_id, payload.paper_ids, user_id)
-    return {"removed": removed}
-
-
-@router.get("/collections/{collection_id}/papers")
-def list_collection_papers(collection_id: str, user_id: str = Depends(get_current_user_id)) -> dict:
-    project = get_project_for_user(collection_id, user_id)
-    if not project:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Collection not found.")
-    return {"papers": list_saved_papers(collection_id)}
-
-
 @router.get("/projects/{project_id}/papers")
 def list_saved_project_papers(project_id: str, user_id: str = Depends(get_current_user_id)) -> dict:
+    """Aggregate all papers from every collection attached to this project.
+
+    Project is a workspace; it does not directly own papers anymore. Papers
+    live inside collections, and a project may have one or more collections
+    attached (the first is typically the primary reading list). This endpoint
+    de-duplicates papers that appear in multiple attached collections.
+    """
     project = get_project_for_user(project_id, user_id)
     if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found.")
-    return {"papers": list_saved_papers(project_id)}
+
+    attached_collections = list_collections_for_project(project_id, user_id)
+    if not attached_collections:
+        return {"papers": []}
+
+    seen: set[str] = set()
+    aggregated: list[dict[str, Any]] = []
+    for collection in attached_collections:
+        collection_id = str(collection.get("id") or "").strip()
+        if not collection_id:
+            continue
+        for paper in list_papers_in_collection(collection_id):
+            paper_id = str(paper.get("id") or "").strip()
+            if not paper_id or paper_id in seen:
+                continue
+            seen.add(paper_id)
+            aggregated.append(paper)
+    return {"papers": aggregated}
 
 
 @router.post("/projects/{project_id}/papers", status_code=status.HTTP_201_CREATED)
@@ -283,9 +275,26 @@ def save_paper_to_project(
     payload: SavePaperRequest,
     user_id: str = Depends(get_current_user_id),
 ) -> dict:
+    """Save a paper into the project's primary collection.
+
+    This endpoint is kept as a convenience for existing frontends that only
+    know about projects. Internally it resolves the project's primary
+    collection and attaches the paper there.
+    """
     project = get_project_for_user(project_id, user_id)
     if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found.")
 
-    paper = save_paper(project_id, payload.model_dump(), user_id=user_id)
+    primary_collection = get_primary_collection_for_project(project_id, user_id)
+    if not primary_collection:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Project has no primary collection. Attach one first.",
+        )
+
+    paper = save_paper_to_collection(
+        primary_collection["id"],
+        payload.model_dump(),
+        user_id=user_id,
+    )
     return {"paper": paper}

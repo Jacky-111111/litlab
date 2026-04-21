@@ -110,8 +110,8 @@ function renderPapers() {
 
 async function loadCollectionsAndMenu() {
   try {
-    const response = await window.LitLab.apiFetch("/projects");
-    collections = response.projects || [];
+    const response = await window.LitLab.apiFetch("/collections");
+    collections = response.collections || [];
     if (!collections.find((item) => item.id === activeCollectionId)) {
       activeCollectionId = "all";
     }
@@ -186,7 +186,7 @@ async function openCollectionEditor(paperCardEl, paperId) {
     const selectedIds = new Set(response.collection_ids || []);
     paperCollectionIdsCache.set(paperId, selectedIds);
     if (!collections.length) {
-      optionsEl.innerHTML = "<p class='muted'>No collections yet. Create a project first.</p>";
+      optionsEl.innerHTML = "<p class='muted'>No collections yet. Create one from a project or the Collections page.</p>";
       return;
     }
     optionsEl.innerHTML = collections

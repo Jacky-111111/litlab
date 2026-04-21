@@ -123,12 +123,260 @@ def delete_project_for_user(project_id: str, user_id: str) -> None:
     client.table("projects").delete().eq("id", project_id).eq("user_id", user_id).execute()
 
 
-def list_saved_papers(project_id: str) -> list[dict[str, Any]]:
+# ---------------------------------------------------------------------------
+# Collections
+# ---------------------------------------------------------------------------
+
+
+def list_collections_for_user(user_id: str) -> list[dict[str, Any]]:
+    client = _require_supabase()
+    response = (
+        client.table("collections")
+        .select("*")
+        .eq("owner_user_id", user_id)
+        .order("updated_at", desc=True)
+        .execute()
+    )
+    return response.data or []
+
+
+def get_collection_for_user(collection_id: str, user_id: str) -> dict[str, Any] | None:
+    client = _require_supabase()
+    response = (
+        client.table("collections")
+        .select("*")
+        .eq("id", collection_id)
+        .eq("owner_user_id", user_id)
+        .limit(1)
+        .execute()
+    )
+    rows = response.data or []
+    return rows[0] if rows else None
+
+
+def create_collection_for_user(user_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    client = _require_supabase()
+    insert_payload = {
+        "owner_user_id": user_id,
+        "title": payload.get("title") or "Untitled collection",
+        "description": payload.get("description") or "",
+    }
+    visibility = payload.get("visibility")
+    if visibility in ("private", "link", "public"):
+        insert_payload["visibility"] = visibility
+    share_slug = payload.get("share_slug")
+    if isinstance(share_slug, str) and share_slug.strip():
+        insert_payload["share_slug"] = share_slug.strip()
+    response = client.table("collections").insert(insert_payload).execute()
+    rows = response.data or []
+    if not rows:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create collection.",
+        )
+    return rows[0]
+
+
+def update_collection_for_user(
+    collection_id: str, user_id: str, payload: dict[str, Any]
+) -> dict[str, Any] | None:
+    client = _require_supabase()
+    update_payload: dict[str, Any] = {}
+    if "title" in payload and payload["title"] is not None:
+        update_payload["title"] = str(payload["title"])
+    if "description" in payload and payload["description"] is not None:
+        update_payload["description"] = str(payload["description"])
+    if payload.get("visibility") in ("private", "link", "public"):
+        update_payload["visibility"] = payload["visibility"]
+    if "share_slug" in payload:
+        slug = payload["share_slug"]
+        update_payload["share_slug"] = str(slug).strip() if isinstance(slug, str) and slug.strip() else None
+    if not update_payload:
+        return get_collection_for_user(collection_id, user_id)
+    response = (
+        client.table("collections")
+        .update(update_payload)
+        .eq("id", collection_id)
+        .eq("owner_user_id", user_id)
+        .execute()
+    )
+    rows = response.data or []
+    return rows[0] if rows else None
+
+
+def delete_collection_for_user(collection_id: str, user_id: str) -> bool:
+    client = _require_supabase()
+    response = (
+        client.table("collections")
+        .delete()
+        .eq("id", collection_id)
+        .eq("owner_user_id", user_id)
+        .execute()
+    )
+    return bool(response.data)
+
+
+# ---------------------------------------------------------------------------
+# project_collections (link table)
+# ---------------------------------------------------------------------------
+
+
+def list_collections_for_project(project_id: str, user_id: str) -> list[dict[str, Any]]:
+    """Return collections attached to a project, in attached-at order.
+
+    The ``is_primary`` flag from ``project_collections`` is merged onto each
+    returned row so the frontend can tell which collection is the project's
+    primary reading list.
+    """
+    project = get_project_for_user(project_id, user_id)
+    if not project:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found.")
+    client = _require_supabase()
+    links = (
+        client.table("project_collections")
+        .select("collection_id, is_primary, attached_at")
+        .eq("project_id", project_id)
+        .order("attached_at", desc=False)
+        .execute()
+    )
+    link_rows = links.data or []
+    if not link_rows:
+        return []
+    collection_ids = [row.get("collection_id") for row in link_rows if row.get("collection_id")]
+    if not collection_ids:
+        return []
+    collections = (
+        client.table("collections")
+        .select("*")
+        .in_("id", collection_ids)
+        .eq("owner_user_id", user_id)
+        .execute()
+    )
+    by_id = {row.get("id"): row for row in (collections.data or []) if row.get("id")}
+    merged: list[dict[str, Any]] = []
+    for link in link_rows:
+        cid = link.get("collection_id")
+        base = by_id.get(cid)
+        if not base:
+            continue
+        merged.append(
+            {
+                **base,
+                "is_primary": bool(link.get("is_primary")),
+                "attached_at": link.get("attached_at"),
+            }
+        )
+    return merged
+
+
+def get_primary_collection_for_project(
+    project_id: str, user_id: str
+) -> dict[str, Any] | None:
+    client = _require_supabase()
+    links = (
+        client.table("project_collections")
+        .select("collection_id")
+        .eq("project_id", project_id)
+        .eq("is_primary", True)
+        .limit(1)
+        .execute()
+    )
+    rows = links.data or []
+    if not rows:
+        return None
+    collection_id = rows[0].get("collection_id")
+    if not collection_id:
+        return None
+    return get_collection_for_user(collection_id, user_id)
+
+
+def attach_collection_to_project(
+    project_id: str,
+    collection_id: str,
+    user_id: str,
+    *,
+    is_primary: bool = False,
+) -> dict[str, Any]:
+    project = get_project_for_user(project_id, user_id)
+    if not project:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found.")
+    collection = get_collection_for_user(collection_id, user_id)
+    if not collection:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Collection not found.")
+    client = _require_supabase()
+    if is_primary:
+        # Demote any existing primary for this project so the partial unique
+        # index (one primary per project) stays satisfied.
+        client.table("project_collections").update({"is_primary": False}).eq(
+            "project_id", project_id
+        ).eq("is_primary", True).execute()
+    response = client.table("project_collections").upsert(
+        {
+            "project_id": project_id,
+            "collection_id": collection_id,
+            "is_primary": bool(is_primary),
+            "attached_at": _now_iso(),
+        },
+        on_conflict="project_id,collection_id",
+    ).execute()
+    rows = response.data or []
+    return rows[0] if rows else {
+        "project_id": project_id,
+        "collection_id": collection_id,
+        "is_primary": is_primary,
+    }
+
+
+def detach_collection_from_project(
+    project_id: str, collection_id: str, user_id: str
+) -> bool:
+    project = get_project_for_user(project_id, user_id)
+    if not project:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found.")
+    client = _require_supabase()
+    response = (
+        client.table("project_collections")
+        .delete()
+        .eq("project_id", project_id)
+        .eq("collection_id", collection_id)
+        .execute()
+    )
+    return bool(response.data)
+
+
+def create_project_with_primary_collection(
+    user_id: str, payload: dict[str, Any]
+) -> dict[str, Any]:
+    """Create a project and auto-create a same-named primary collection for it."""
+    project = create_project_for_user(user_id, payload)
+    collection = create_collection_for_user(
+        user_id,
+        {
+            "title": project.get("title") or "Untitled project",
+            "description": project.get("description") or "",
+        },
+    )
+    attach_collection_to_project(
+        project_id=project["id"],
+        collection_id=collection["id"],
+        user_id=user_id,
+        is_primary=True,
+    )
+    return {"project": project, "primary_collection": collection}
+
+
+def list_papers_in_collection(collection_id: str) -> list[dict[str, Any]]:
+    """Return the papers inside a given collection, newest-attached first.
+
+    The caller is expected to have already verified access to the collection
+    (typically via ``get_collection_for_user``). This function only reads the
+    join table plus the papers table.
+    """
     client = _require_supabase()
     links = (
         client.table("collection_papers")
         .select("paper_id")
-        .eq("collection_id", project_id)
+        .eq("collection_id", collection_id)
         .order("added_at", desc=True)
         .execute()
     )
@@ -137,7 +385,7 @@ def list_saved_papers(project_id: str) -> list[dict[str, Any]]:
         legacy = (
             client.table("saved_papers")
             .select("*")
-            .eq("project_id", project_id)
+            .eq("project_id", collection_id)
             .order("created_at", desc=True)
             .execute()
         )
@@ -149,15 +397,33 @@ def list_saved_papers(project_id: str) -> list[dict[str, Any]]:
     return [paper_map[paper_id] for paper_id in paper_ids if paper_id in paper_map]
 
 
-def save_paper(project_id: str, payload: dict[str, Any], user_id: str | None = None) -> dict[str, Any]:
+# Backwards-compatible alias. New code should call list_papers_in_collection.
+def list_saved_papers(collection_id: str) -> list[dict[str, Any]]:
+    return list_papers_in_collection(collection_id)
+
+
+def save_paper_to_collection(
+    collection_id: str,
+    payload: dict[str, Any],
+    user_id: str | None = None,
+) -> dict[str, Any]:
     if not user_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="user_id is required when saving a paper.",
         )
     paper = create_or_update_paper_for_user(user_id, payload)
-    add_paper_to_collection(project_id=project_id, paper_id=paper["id"], user_id=user_id)
+    add_paper_to_collection(collection_id=collection_id, paper_id=paper["id"], user_id=user_id)
     return paper
+
+
+# Backwards-compatible alias.
+def save_paper(
+    collection_id: str,
+    payload: dict[str, Any],
+    user_id: str | None = None,
+) -> dict[str, Any]:
+    return save_paper_to_collection(collection_id, payload, user_id=user_id)
 
 
 def _now_iso() -> str:
@@ -488,27 +754,27 @@ def delete_paper_for_user(paper_id: str, user_id: str) -> bool:
 
 def list_collection_ids_for_paper(paper_id: str, user_id: str) -> list[str]:
     client = _require_supabase()
-    project_rows = list_projects_for_user(user_id)
-    allowed_ids = {project.get("id") for project in project_rows if project.get("id")}
+    collection_rows = list_collections_for_user(user_id)
+    allowed_ids = {row.get("id") for row in collection_rows if row.get("id")}
     links = client.table("collection_papers").select("collection_id").eq("paper_id", paper_id).execute()
     linked_ids = [row.get("collection_id") for row in (links.data or []) if row.get("collection_id")]
     return [collection_id for collection_id in linked_ids if collection_id in allowed_ids]
 
 
-def add_paper_to_collection(project_id: str, paper_id: str, user_id: str) -> None:
-    project = get_project_for_user(project_id, user_id)
-    if not project:
+def add_paper_to_collection(collection_id: str, paper_id: str, user_id: str) -> None:
+    collection = get_collection_for_user(collection_id, user_id)
+    if not collection:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Collection not found.")
     client = _require_supabase()
     client.table("collection_papers").upsert(
-        {"collection_id": project_id, "paper_id": paper_id, "added_at": _now_iso(), "added_by": user_id},
+        {"collection_id": collection_id, "paper_id": paper_id, "added_at": _now_iso(), "added_by": user_id},
         on_conflict="collection_id,paper_id",
     ).execute()
 
 
-def batch_add_papers_to_collection(project_id: str, paper_ids: list[str], user_id: str) -> int:
-    project = get_project_for_user(project_id, user_id)
-    if not project:
+def batch_add_papers_to_collection(collection_id: str, paper_ids: list[str], user_id: str) -> int:
+    collection = get_collection_for_user(collection_id, user_id)
+    if not collection:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Collection not found.")
     deduped_ids = []
     seen = set()
@@ -523,16 +789,16 @@ def batch_add_papers_to_collection(project_id: str, paper_ids: list[str], user_i
 
     client = _require_supabase()
     payload = [
-        {"collection_id": project_id, "paper_id": paper_id, "added_at": _now_iso(), "added_by": user_id}
+        {"collection_id": collection_id, "paper_id": paper_id, "added_at": _now_iso(), "added_by": user_id}
         for paper_id in deduped_ids
     ]
     client.table("collection_papers").upsert(payload, on_conflict="collection_id,paper_id").execute()
     return len(deduped_ids)
 
 
-def batch_remove_papers_from_collection(project_id: str, paper_ids: list[str], user_id: str) -> int:
-    project = get_project_for_user(project_id, user_id)
-    if not project:
+def batch_remove_papers_from_collection(collection_id: str, paper_ids: list[str], user_id: str) -> int:
+    collection = get_collection_for_user(collection_id, user_id)
+    if not collection:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Collection not found.")
     deduped_ids = []
     seen = set()
@@ -546,7 +812,7 @@ def batch_remove_papers_from_collection(project_id: str, paper_ids: list[str], u
         return 0
 
     client = _require_supabase()
-    client.table("collection_papers").delete().eq("collection_id", project_id).in_("paper_id", deduped_ids).execute()
+    client.table("collection_papers").delete().eq("collection_id", collection_id).in_("paper_id", deduped_ids).execute()
     return len(deduped_ids)
 
 

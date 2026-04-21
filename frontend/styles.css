@@ -644,6 +644,12 @@ label {
   color: #4f5a75;
 }
 
+.badge.primary-badge {
+  background: #e5eeff;
+  color: #1942a1;
+  border-color: #c8d6f3;
+}
+
 .mini-card {
   border: 1px solid var(--border);
   border-radius: 12px;

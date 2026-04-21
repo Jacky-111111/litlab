@@ -9,6 +9,7 @@ const projectDescriptionEl = document.getElementById("project-description");
 const frameworkGuideEl = document.getElementById("framework-guide");
 const notesFormEl = document.getElementById("framework-notes-form");
 const savedPapersEl = document.getElementById("saved-papers");
+const readingListsEl = document.getElementById("project-reading-lists");
 const searchFormEl = document.getElementById("search-form");
 const searchResultsEl = document.getElementById("search-results");
 const batchSaveSearchBtn = document.getElementById("batch-save-search-btn");
@@ -22,6 +23,8 @@ const paperNoteInputEl = document.getElementById("selected-paper-note");
 const savePaperNoteBtn = document.getElementById("save-selected-paper-note");
 
 let selectedPaper = null;
+let attachedCollections = [];
+let primaryCollectionId = null;
 const searchPaperMap = new Map();
 
 function setMessage(text, tone = "info") {
@@ -89,7 +92,7 @@ function paperCard(paper, includeSave = false) {
         ${
           includeSave
             ? `<button data-action="save-paper" data-paper='${JSON.stringify(paper)
-                .replace(/'/g, "&apos;")}'>Save to Project</button>`
+                .replace(/'/g, "&apos;")}'>Save to Primary List</button>`
             : `<button data-action="select-paper" data-paper='${JSON.stringify(paper)
                 .replace(/'/g, "&apos;")}'>Analyze</button>`
         }
@@ -150,6 +153,59 @@ async function loadSavedPapers() {
   }
 }
 
+function renderReadingLists() {
+  if (!readingListsEl) return;
+  if (!attachedCollections.length) {
+    readingListsEl.innerHTML =
+      "<p class='muted'>No reading lists attached to this project yet.</p>";
+    return;
+  }
+  readingListsEl.innerHTML = attachedCollections
+    .map((collection) => {
+      const title = collection.title || "Untitled collection";
+      const badge = collection.is_primary ? "<span class='badge primary-badge'>Primary</span>" : "";
+      const description = collection.description
+        ? `<p class='muted'>${collection.description}</p>`
+        : "";
+      return `
+        <article class="mini-card">
+          <h4>${title} ${badge}</h4>
+          ${description}
+        </article>
+      `;
+    })
+    .join("");
+}
+
+async function loadAttachedCollections() {
+  try {
+    const response = await window.LitLab.apiFetch(`/projects/${projectId}/collections`);
+    attachedCollections = response.collections || [];
+    const primary = attachedCollections.find((collection) => collection.is_primary);
+    primaryCollectionId = primary?.id || attachedCollections[0]?.id || null;
+    renderReadingLists();
+  } catch (error) {
+    attachedCollections = [];
+    primaryCollectionId = null;
+    if (readingListsEl) {
+      readingListsEl.innerHTML = `<p class='message error'>${
+        error.message || "Could not load reading lists."
+      }</p>`;
+    }
+  }
+}
+
+function ensurePrimaryCollectionId() {
+  if (!primaryCollectionId) {
+    setMessage(
+      "This project does not have a primary reading list yet. Refresh the page or try again.",
+      "error"
+    );
+    return null;
+  }
+  return primaryCollectionId;
+}
+
 searchFormEl.addEventListener("submit", async (event) => {
   event.preventDefault();
   const formData = new FormData(searchFormEl);
@@ -192,14 +248,16 @@ searchResultsEl.addEventListener("click", async (event) => {
 
   try {
     const paper = JSON.parse(paperJson);
+    const collectionId = ensurePrimaryCollectionId();
+    if (!collectionId) return;
     await window.LitLab.apiFetch("/papers/ingest", {
       method: "POST",
       body: JSON.stringify({
         ...paper,
-        collection_ids: [projectId],
+        collection_ids: [collectionId],
       }),
     });
-    setMessage("Paper saved to project.", "success");
+    setMessage("Paper saved to this project's primary reading list.", "success");
     await loadSavedPapers();
   } catch (error) {
     setMessage(error.message || "Could not save paper.", "error");
@@ -290,6 +348,8 @@ batchSaveSearchBtn.addEventListener("click", async () => {
     setMessage("Select at least one search result.", "warning");
     return;
   }
+  const collectionId = ensurePrimaryCollectionId();
+  if (!collectionId) return;
   setMessage("Saving selected papers...");
   try {
     await Promise.all(
@@ -301,12 +361,12 @@ batchSaveSearchBtn.addEventListener("click", async () => {
           method: "POST",
           body: JSON.stringify({
             ...paper,
-            collection_ids: [projectId],
+            collection_ids: [collectionId],
           }),
         });
       })
     );
-    setMessage(`Saved ${checked.length} paper(s) to this collection.`, "success");
+    setMessage(`Saved ${checked.length} paper(s) to this project's primary reading list.`, "success");
     await loadSavedPapers();
   } catch (error) {
     setMessage(error.message || "Could not batch save papers.", "error");
@@ -330,4 +390,5 @@ savePaperNoteBtn.addEventListener("click", async () => {
 });
 
 loadProjectDetail();
+loadAttachedCollections();
 loadSavedPapers();

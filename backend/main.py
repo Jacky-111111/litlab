@@ -9,12 +9,14 @@ load_dotenv()
 try:
     from .routes.account import router as account_router
     from .routes.ai import router as ai_router
+    from .routes.collections import router as collections_router
     from .routes.papers import router as papers_router
     from .routes.projects import router as projects_router
 except ImportError:
     # Local fallback when running `uvicorn main:app` inside `backend/`.
     from routes.account import router as account_router
     from routes.ai import router as ai_router
+    from routes.collections import router as collections_router
     from routes.papers import router as papers_router
     from routes.projects import router as projects_router
 
@@ -41,6 +43,7 @@ def create_app() -> FastAPI:
 
     app.include_router(account_router)
     app.include_router(projects_router)
+    app.include_router(collections_router)
     app.include_router(papers_router)
     app.include_router(ai_router)
 

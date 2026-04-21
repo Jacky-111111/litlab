@@ -304,19 +304,19 @@ function refreshLibraryControls() {
 
 async function loadCollections() {
   try {
-    const response = await window.LitLab.apiFetch("/projects");
-    availableCollections = response.projects || [];
+    const response = await window.LitLab.apiFetch("/collections");
+    availableCollections = response.collections || [];
     if (!availableCollections.length) {
-      collectionsEl.innerHTML = "<p class='muted'>No collections yet. Create a project first.</p>";
+      collectionsEl.innerHTML = "<p class='muted'>No collections yet. Create one from a project or the Collections page.</p>";
       refreshLibraryControls();
       return;
     }
     collectionsEl.innerHTML = availableCollections
       .map(
-        (project) => `
+        (collection) => `
           <label class="checkbox-inline mini-card">
-            <input type="checkbox" data-role="collection-checkbox" value="${project.id}" />
-            <span>${project.title}</span>
+            <input type="checkbox" data-role="collection-checkbox" value="${collection.id}" />
+            <span>${collection.title}</span>
           </label>
         `
       )

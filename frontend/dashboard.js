@@ -124,7 +124,9 @@ projectsGridEl.addEventListener("click", async (event) => {
   }
 
   if (action === "delete") {
-    const confirmed = window.confirm("Delete this project and its context?");
+    const confirmed = window.confirm(
+      "Delete this project? Its reading lists stay in Collections, and your Library papers are not removed."
+    );
     if (!confirmed) return;
     try {
       await window.LitLab.apiFetch(`/projects/${projectId}`, { method: "DELETE" });
