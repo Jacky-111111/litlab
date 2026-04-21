@@ -13,6 +13,7 @@ try:
         batch_remove_papers_from_collection,
         create_or_update_paper_for_user,
         create_signed_pdf_url,
+        delete_paper_for_user,
         get_current_user_id,
         get_or_update_paper_note,
         get_paper_for_user,
@@ -34,6 +35,7 @@ except ImportError:
         batch_remove_papers_from_collection,
         create_or_update_paper_for_user,
         create_signed_pdf_url,
+        delete_paper_for_user,
         get_current_user_id,
         get_or_update_paper_note,
         get_paper_for_user,
@@ -164,6 +166,13 @@ def get_library_paper(paper_id: str, user_id: str = Depends(get_current_user_id)
     note = get_or_update_paper_note(paper_id, user_id)
     collection_ids = list_collection_ids_for_paper(paper_id, user_id)
     return {"paper": paper, "note": note, "collection_ids": collection_ids}
+
+
+@router.delete("/papers/{paper_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_library_paper(paper_id: str, user_id: str = Depends(get_current_user_id)) -> None:
+    deleted = delete_paper_for_user(paper_id, user_id)
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Paper not found.")
 
 
 @router.put("/papers/{paper_id}/note")

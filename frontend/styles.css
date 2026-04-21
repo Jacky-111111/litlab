@@ -282,6 +282,94 @@ label {
   margin-bottom: 0.4rem;
 }
 
+.library-toolbar {
+  padding: 1rem;
+}
+
+.library-search-form {
+  margin: 0;
+}
+
+.library-search-label {
+  margin-bottom: 0.45rem;
+}
+
+.library-search-row {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.library-search-row input {
+  margin-top: 0;
+  flex: 1;
+}
+
+.library-workspace {
+  display: grid;
+  grid-template-columns: minmax(240px, 280px) minmax(560px, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.library-sidebar {
+  position: sticky;
+  top: 90px;
+}
+
+.library-filter-menu {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 0.8rem;
+}
+
+.library-filter-item {
+  width: 100%;
+  justify-content: flex-start;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.library-filter-item.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+.library-results-head {
+  margin-bottom: 0.8rem;
+}
+
+.library-results-head h2 {
+  margin: 0;
+}
+
+.library-results-head p {
+  margin: 0.3rem 0 0;
+}
+
+.paper-collection-editor {
+  margin-top: 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #f8faff;
+  padding: 0.8rem;
+}
+
+.paper-collection-editor h5 {
+  margin: 0;
+  font-size: 0.96rem;
+}
+
+.paper-collection-editor p {
+  margin: 0.35rem 0 0.7rem;
+}
+
+.library-delete-btn {
+  margin-left: auto;
+}
+
 .read-papers-layout .mini-card p {
   margin: 0.4rem 0 0;
 }
@@ -465,6 +553,22 @@ pre.ai-output {
 @media (max-width: 900px) {
   .auth-portal {
     grid-template-columns: 1fr;
+  }
+
+  .library-search-row {
+    flex-wrap: wrap;
+  }
+
+  .library-search-row button {
+    width: 100%;
+  }
+
+  .library-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .library-sidebar {
+    position: static;
   }
 
   .dashboard-layout {

@@ -19,6 +19,9 @@ const citationApaEl = document.getElementById("citation-apa");
 const citationChicagoEl = document.getElementById("citation-chicago");
 const collectionsEl = document.getElementById("read-paper-collections");
 const persistToggleEl = document.getElementById("persist-to-library");
+const libraryMembershipStatusEl = document.getElementById("library-membership-status");
+const saveLibraryMembershipBtn = document.getElementById("save-library-membership-btn");
+const removeFromLibraryBtn = document.getElementById("remove-from-library-btn");
 const readerModeHintEl = document.getElementById("reader-mode-hint");
 const backToLibraryBtn = document.getElementById("back-to-library-btn");
 const nicknameEditorEl = document.getElementById("nickname-editor");
@@ -28,6 +31,8 @@ const pageParams = new URLSearchParams(window.location.search);
 const presetPaperId = String(pageParams.get("paper_id") || "").trim();
 let currentPaperId = "";
 let currentPaperData = null;
+let availableCollections = [];
+let currentCollectionIds = new Set();
 
 function setMessage(text, tone = "info") {
   messageEl.textContent = text;
@@ -75,6 +80,7 @@ function renderPaperMeta(paper) {
     ${paper.url ? `<p><a href="${paper.url}" target="_blank" rel="noopener noreferrer">Original URL</a></p>` : ""}
   `;
   renderSavedSourceInfo(paper);
+  refreshLibraryControls();
 }
 
 function renderSavedSourceInfo(paper) {
@@ -91,6 +97,14 @@ function renderSavedSourceInfo(paper) {
   );
   savedSourceInfoEl.classList.remove("muted");
   savedSourceInfoEl.innerHTML = lines.join("");
+}
+
+function applyPaperLibraryState(paperId, collectionIds = []) {
+  currentPaperId = String(paperId || "").trim();
+  currentCollectionIds = new Set(collectionIds);
+  nicknameEditorEl.hidden = !currentPaperId;
+  syncCollectionSelectionToUi(currentCollectionIds);
+  refreshLibraryControls();
 }
 
 function renderCitations(paper) {
@@ -210,7 +224,6 @@ function renderAnalysisResponse(payload) {
 }
 
 function selectedCollectionIds() {
-  if (!persistToggleEl.checked) return [];
   const nodes = collectionsEl.querySelectorAll('input[data-role="collection-checkbox"]:checked');
   return Array.from(nodes)
     .map((node) => node.value)
@@ -224,15 +237,50 @@ function setCollectionSelectionEnabled(enabled) {
   });
 }
 
+function setLibraryMembershipStatus(text, tone = "muted") {
+  libraryMembershipStatusEl.textContent = text;
+  libraryMembershipStatusEl.className = tone === "error" ? "message error" : "muted";
+}
+
+function syncCollectionSelectionToUi(collectionIds) {
+  const selectedSet = new Set(collectionIds || []);
+  const checkboxes = collectionsEl.querySelectorAll('input[data-role="collection-checkbox"]');
+  checkboxes.forEach((checkbox) => {
+    checkbox.checked = selectedSet.has(checkbox.value);
+  });
+}
+
+function refreshLibraryControls() {
+  const hasSavedPaper = Boolean(currentPaperId);
+  saveLibraryMembershipBtn.disabled = !hasSavedPaper;
+  removeFromLibraryBtn.disabled = !hasSavedPaper;
+  setCollectionSelectionEnabled(persistToggleEl.checked && hasSavedPaper);
+
+  if (!persistToggleEl.checked) {
+    setLibraryMembershipStatus("Library save is off. Analyze without saving.", "muted");
+    return;
+  }
+  if (!hasSavedPaper) {
+    setLibraryMembershipStatus("This paper is not in Library yet. Run Analyze to save it first.", "muted");
+    return;
+  }
+
+  setLibraryMembershipStatus(
+    `Saved in Library. Currently linked to ${currentCollectionIds.size} collection(s).`,
+    "muted"
+  );
+}
+
 async function loadCollections() {
   try {
     const response = await window.LitLab.apiFetch("/projects");
-    const projects = response.projects || [];
-    if (!projects.length) {
+    availableCollections = response.projects || [];
+    if (!availableCollections.length) {
       collectionsEl.innerHTML = "<p class='muted'>No collections yet. Create a project first.</p>";
+      refreshLibraryControls();
       return;
     }
-    collectionsEl.innerHTML = projects
+    collectionsEl.innerHTML = availableCollections
       .map(
         (project) => `
           <label class="checkbox-inline mini-card">
@@ -242,9 +290,12 @@ async function loadCollections() {
         `
       )
       .join("");
-    setCollectionSelectionEnabled(persistToggleEl.checked);
+    syncCollectionSelectionToUi(currentCollectionIds);
+    refreshLibraryControls();
   } catch (error) {
+    availableCollections = [];
     collectionsEl.innerHTML = `<p class='message error'>${error.message || "Could not load collections."}</p>`;
+    refreshLibraryControls();
   }
 }
 
@@ -259,6 +310,7 @@ async function readExistingPaper(paperId) {
       paperUrlInputEl.value = paperPayload.paper.url;
     }
     renderPaperMeta(paperPayload.paper || {});
+    applyPaperLibraryState(paperPayload?.paper?.id || "", paperPayload.collection_ids || []);
     renderCitations(paperPayload.paper || {});
     const analysisPayload = await window.LitLab.apiFetch(`/ai/papers/${paperId}/analysis`, {
       method: "POST",
@@ -353,6 +405,12 @@ async function analyzeFromCurrentSource() {
       }
     }
     renderAnalysisResponse(payload);
+    const savedPaperId = String(payload?.paper?.id || "").trim();
+    if (savedPaperId) {
+      applyPaperLibraryState(savedPaperId, selectedCollectionIds());
+    } else {
+      applyPaperLibraryState("", []);
+    }
     setMessage(
       persistToggleEl.checked ? "Analysis completed and saved to library." : "Analysis completed (not saved).",
       "success"
@@ -374,7 +432,70 @@ analyzePaperBtn.addEventListener("click", async () => {
 });
 
 persistToggleEl.addEventListener("change", () => {
-  setCollectionSelectionEnabled(persistToggleEl.checked);
+  refreshLibraryControls();
+});
+
+saveLibraryMembershipBtn.addEventListener("click", async () => {
+  if (!currentPaperId) {
+    setMessage("This paper is not in Library yet. Analyze with save enabled first.", "warning");
+    return;
+  }
+
+  const nextSelectedIds = new Set(selectedCollectionIds());
+  const toAdd = availableCollections
+    .map((collection) => collection.id)
+    .filter((collectionId) => nextSelectedIds.has(collectionId) && !currentCollectionIds.has(collectionId));
+  const toRemove = availableCollections
+    .map((collection) => collection.id)
+    .filter((collectionId) => !nextSelectedIds.has(collectionId) && currentCollectionIds.has(collectionId));
+
+  if (!toAdd.length && !toRemove.length) {
+    setMessage("No collection changes to save.", "info");
+    return;
+  }
+
+  setMessage("Updating collection placement...");
+  try {
+    await Promise.all([
+      ...toAdd.map((collectionId) =>
+        window.LitLab.apiFetch(`/collections/${collectionId}/papers:batchAdd`, {
+          method: "POST",
+          body: JSON.stringify({ paper_ids: [currentPaperId] }),
+        })
+      ),
+      ...toRemove.map((collectionId) =>
+        window.LitLab.apiFetch(`/collections/${collectionId}/papers:batchRemove`, {
+          method: "POST",
+          body: JSON.stringify({ paper_ids: [currentPaperId] }),
+        })
+      ),
+    ]);
+    currentCollectionIds = nextSelectedIds;
+    refreshLibraryControls();
+    setMessage("Collection placement updated.", "success");
+  } catch (error) {
+    setMessage(error.message || "Could not update collection placement.", "error");
+  }
+});
+
+removeFromLibraryBtn.addEventListener("click", async () => {
+  if (!currentPaperId) {
+    setMessage("This paper is not saved in Library.", "warning");
+    return;
+  }
+  const confirmed = window.confirm("Remove this paper from your Library? This also removes its collection links and notes.");
+  if (!confirmed) return;
+
+  setMessage("Removing paper from Library...");
+  try {
+    await window.LitLab.apiFetch(`/papers/${currentPaperId}`, { method: "DELETE" });
+    applyPaperLibraryState("", []);
+    persistToggleEl.checked = false;
+    refreshLibraryControls();
+    setMessage("Paper removed from Library.", "success");
+  } catch (error) {
+    setMessage(error.message || "Could not remove paper from Library.", "error");
+  }
 });
 
 savePaperNicknameBtn.addEventListener("click", async () => {
@@ -431,7 +552,7 @@ async function saveNicknameFromEditor() {
       ...updatedPaper,
       authors: updatedPaper.authors || [],
     });
-    setMessage("昵称已同步到 Library。", "success");
+    setMessage("Nickname synced to Library.", "success");
   } catch (error) {
     setMessage(error.message || "Could not update nickname.", "error");
   }
@@ -504,4 +625,5 @@ if (presetPaperId) {
   readExistingPaper(presetPaperId);
 }
 
+refreshLibraryControls();
 loadCollections();

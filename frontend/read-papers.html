@@ -65,13 +65,23 @@
       </section>
 
       <section class="panel">
-        <h2>Save Targets</h2>
+        <h2>Save into Library</h2>
         <label class="checkbox-inline">
           <input id="persist-to-library" type="checkbox" checked />
-          Save this reading result to my library
+          Keep this paper in my Library
         </label>
-        <p class="muted">If enabled, LitLab saves this paper and optionally links it to selected collections.</p>
+        <p id="library-membership-status" class="muted">
+          Save this paper to Library, then choose which collections it belongs to.
+        </p>
         <div id="read-paper-collections" class="grid grid-2"></div>
+        <div class="inline-actions">
+          <button id="save-library-membership-btn" type="button" class="secondary">
+            Update Collection Placement
+          </button>
+          <button id="remove-from-library-btn" type="button" class="danger">
+            Remove from Library
+          </button>
+        </div>
       </section>
 
       <section class="panel">

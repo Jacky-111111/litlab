@@ -480,6 +480,12 @@ def update_paper_url_for_user(paper_id: str, user_id: str, url: str) -> dict[str
     return _paper_row_to_response(rows[0])
 
 
+def delete_paper_for_user(paper_id: str, user_id: str) -> bool:
+    client = _require_supabase()
+    response = client.table("papers").delete().eq("id", paper_id).eq("user_id", user_id).execute()
+    return bool(response.data)
+
+
 def list_collection_ids_for_paper(paper_id: str, user_id: str) -> list[str]:
     client = _require_supabase()
     project_rows = list_projects_for_user(user_id)

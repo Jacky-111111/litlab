@@ -21,37 +21,41 @@
     <main class="container section project-layout">
       <section class="panel">
         <h1>Paper Library</h1>
-        <p class="muted">Each paper is stored once. Add selected papers to multiple collections, keep notes, and reuse AI outputs.</p>
+        <p class="muted">Browse all papers, filter by collection, and manage each paper's collection membership in one place.</p>
         <p id="library-message" class="message info">Loading your papers...</p>
       </section>
 
-      <section class="two-col">
-        <article class="panel">
-          <h2>Library Search</h2>
-          <form id="library-search-form">
-            <label>
-              Search title
-              <input name="query" type="text" placeholder="e.g., carbon accounting framework" />
-            </label>
-            <button type="submit">Search Library</button>
-          </form>
-          <div id="library-papers" class="stack"></div>
-        </article>
-
-        <article class="panel">
-          <h2>Collections</h2>
-          <p class="muted">Choose one or more collections and batch add selected papers.</p>
-          <div id="collection-checklist" class="stack"></div>
-          <button id="batch-add-btn" type="button">Add Selected Papers to Collections</button>
-        </article>
+      <section class="panel library-toolbar">
+        <form id="library-search-form" class="library-search-form">
+          <label class="library-search-label" for="library-search-input">Research Search</label>
+          <div class="library-search-row">
+            <input
+              id="library-search-input"
+              name="query"
+              type="text"
+              placeholder="Search by paper title or nickname"
+              autocomplete="off"
+            />
+            <button id="clear-search-btn" type="button" class="secondary">Clear</button>
+            <button type="submit">Search</button>
+          </div>
+        </form>
       </section>
 
-      <section class="panel">
-        <h2>Reading Flow</h2>
-        <p class="muted">
-          Single-paper reading now uses the unified Read Papers interface. Click <strong>Read Paper</strong>
-          from any library card to open it in reader mode.
-        </p>
+      <section class="library-workspace">
+        <aside class="panel library-sidebar">
+          <h2>View</h2>
+          <p class="muted">Choose all papers or a specific collection.</p>
+          <div id="library-filter-menu" class="library-filter-menu"></div>
+        </aside>
+
+        <section class="panel library-results-panel">
+          <div class="library-results-head">
+            <h2 id="library-results-title">All Papers</h2>
+            <p id="library-results-meta" class="muted"></p>
+          </div>
+          <div id="library-papers" class="stack"></div>
+        </section>
       </section>
     </main>
   </body>
