@@ -37,6 +37,7 @@ function paperCard(paper) {
   const urlText = paper.url ? paper.url.replace(/^https?:\/\//, "") : "";
   return `
     <article class="card paper-card" data-paper-id="${paper.id}">
+      ${paper.url ? `<a class="paper-card-source-link" href="${paper.url}" target="_blank" rel="noopener noreferrer">Open Source</a>` : ""}
       <h4>${nickname}</h4>
       <p class="muted">Title: ${title}</p>
       <p class="muted">${escapeHtml(authors)}${paper.year ? ` · ${paper.year}` : ""} · ${escapeHtml(
@@ -53,7 +54,6 @@ function paperCard(paper) {
         <button type="button" class="danger library-delete-btn" data-role="delete-paper" data-paper-id="${paper.id}">
           Delete
         </button>
-        ${paper.url ? `<a class="secondary" href="${paper.url}" target="_blank" rel="noopener noreferrer">Open Source</a>` : ""}
       </div>
       <section class="paper-collection-editor" data-role="collection-editor" hidden>
         <h5>Collection Settings</h5>

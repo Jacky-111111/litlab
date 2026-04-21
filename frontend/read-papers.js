@@ -27,6 +27,9 @@ const backToLibraryBtn = document.getElementById("back-to-library-btn");
 const nicknameEditorEl = document.getElementById("nickname-editor");
 const paperNicknameInputEl = document.getElementById("paper-nickname-input");
 const savePaperNicknameBtn = document.getElementById("save-paper-nickname-btn");
+const paperNoteEditorEl = document.getElementById("paper-note-editor");
+const paperNoteInputEl = document.getElementById("paper-note-input");
+const savePaperNoteBtn = document.getElementById("save-paper-note-btn");
 const pageParams = new URLSearchParams(window.location.search);
 const presetPaperId = String(pageParams.get("paper_id") || "").trim();
 let currentPaperId = "";
@@ -77,7 +80,11 @@ function renderPaperMeta(paper) {
     <p>Year: ${paper.year || "Unknown"}</p>
     <p>Source: ${paper.source || "Unknown"}</p>
     ${paper.pdf_storage_path ? `<p>PDF saved: ${paper.pdf_storage_path}</p>` : ""}
-    ${paper.url ? `<p><a href="${paper.url}" target="_blank" rel="noopener noreferrer">Original URL</a></p>` : ""}
+    ${
+      paper.url
+        ? `<p><a class="outbound-link" href="${paper.url}" target="_blank" rel="noopener noreferrer">Original URL <span aria-hidden="true">↗</span></a></p>`
+        : ""
+    }
   `;
   renderSavedSourceInfo(paper);
   refreshLibraryControls();
@@ -103,8 +110,30 @@ function applyPaperLibraryState(paperId, collectionIds = []) {
   currentPaperId = String(paperId || "").trim();
   currentCollectionIds = new Set(collectionIds);
   nicknameEditorEl.hidden = !currentPaperId;
+  paperNoteEditorEl.hidden = !currentPaperId;
+  if (!currentPaperId) {
+    paperNoteInputEl.value = "";
+  }
   syncCollectionSelectionToUi(currentCollectionIds);
   refreshLibraryControls();
+}
+
+function renderPaperNote(notePayload) {
+  const content = String(notePayload?.content || "");
+  paperNoteInputEl.value = content;
+}
+
+async function loadPaperNote(paperId) {
+  if (!paperId) {
+    renderPaperNote({ content: "" });
+    return;
+  }
+  try {
+    const payload = await window.LitLab.apiFetch(`/papers/${paperId}`);
+    renderPaperNote(payload.note || { content: "" });
+  } catch (_error) {
+    renderPaperNote({ content: "" });
+  }
 }
 
 function renderCitations(paper) {
@@ -311,6 +340,7 @@ async function readExistingPaper(paperId) {
     }
     renderPaperMeta(paperPayload.paper || {});
     applyPaperLibraryState(paperPayload?.paper?.id || "", paperPayload.collection_ids || []);
+    renderPaperNote(paperPayload.note || { content: "" });
     renderCitations(paperPayload.paper || {});
     const analysisPayload = await window.LitLab.apiFetch(`/ai/papers/${paperId}/analysis`, {
       method: "POST",
@@ -408,6 +438,7 @@ async function analyzeFromCurrentSource() {
     const savedPaperId = String(payload?.paper?.id || "").trim();
     if (savedPaperId) {
       applyPaperLibraryState(savedPaperId, selectedCollectionIds());
+      await loadPaperNote(savedPaperId);
     } else {
       applyPaperLibraryState("", []);
     }
@@ -502,6 +533,23 @@ savePaperNicknameBtn.addEventListener("click", async () => {
   await saveNicknameFromEditor();
 });
 
+savePaperNoteBtn.addEventListener("click", async () => {
+  if (!currentPaperId) {
+    setMessage("This paper is not saved yet. Enable save and analyze first.", "warning");
+    return;
+  }
+  try {
+    const content = String(paperNoteInputEl.value || "");
+    await window.LitLab.apiFetch(`/papers/${currentPaperId}/note`, {
+      method: "PUT",
+      body: JSON.stringify({ content }),
+    });
+    setMessage("Personal notes saved.", "success");
+  } catch (error) {
+    setMessage(error.message || "Could not save notes.", "error");
+  }
+});
+
 savePaperUrlBtn.addEventListener("click", async () => {
   if (!currentPaperId) {
     setMessage("Please analyze and save this paper first, then you can save URL directly.", "warning");
@@ -572,7 +620,7 @@ citationSectionEl.addEventListener("click", async (event) => {
   }
   try {
     await navigator.clipboard.writeText(value);
-    setMessage("Citation copied.", "success");
+    window.LitLab.showToast("Copied");
   } catch (_error) {
     setMessage("Could not copy citation. Please copy manually.", "warning");
   }
@@ -592,7 +640,7 @@ savedSourceInfoEl.addEventListener("click", async (event) => {
     }
     try {
       await navigator.clipboard.writeText(url);
-      setMessage("Saved URL copied.", "success");
+      window.LitLab.showToast("Copied");
     } catch (_error) {
       setMessage("Could not copy URL. Please copy manually.", "warning");
     }

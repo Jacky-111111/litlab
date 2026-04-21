@@ -32,103 +32,124 @@
         <p id="read-papers-message" class="message info">Ready to analyze a paper.</p>
       </section>
 
-      <section class="panel">
-        <h2>Paper Source</h2>
-        <p class="muted">Use URL or PDF upload here. Saved URL/PDF information for this paper is also shown below.</p>
-        <div class="two-col">
-          <div>
-            <label>
-              Paper URL
-              <input id="paper-url-input" type="url" placeholder="https://arxiv.org/abs/..." />
-            </label>
-            <div class="inline-actions">
-              <button id="save-paper-url-btn" type="button" class="secondary">Save URL</button>
-            </div>
-          </div>
-          <div>
-            <label>
-              Upload PDF
-              <input id="paper-pdf-input" class="file-input-hidden" name="paper_pdf" type="file" accept="application/pdf,.pdf" />
-              <div class="file-picker-row">
-                <button id="choose-pdf-btn" type="button" class="secondary">Choose File</button>
-                <span id="selected-pdf-name" class="muted">No file chosen</span>
+      <section class="read-papers-workspace">
+        <div class="read-papers-controls stack">
+          <section class="panel">
+            <h2>Paper Source</h2>
+            <p class="muted">Use URL or PDF upload here. Saved URL/PDF information for this paper is also shown below.</p>
+            <div class="two-col">
+              <div>
+                <label>
+                  Paper URL
+                  <input id="paper-url-input" type="url" placeholder="https://arxiv.org/abs/..." />
+                </label>
+                <div class="inline-actions">
+                  <button id="save-paper-url-btn" type="button" class="secondary">Save URL</button>
+                </div>
               </div>
+              <div>
+                <label>
+                  Upload PDF
+                  <input id="paper-pdf-input" class="file-input-hidden" name="paper_pdf" type="file" accept="application/pdf,.pdf" />
+                  <div class="file-picker-row">
+                    <button id="choose-pdf-btn" type="button" class="secondary">Choose File</button>
+                    <span id="selected-pdf-name" class="muted">No file chosen</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+            <div id="saved-source-info" class="mini-card muted">
+              Saved source URL and PDF status will appear here after analysis.
+            </div>
+            <div class="inline-actions">
+              <button id="analyze-paper-btn" type="button">Start Analyze</button>
+            </div>
+          </section>
+
+          <section class="panel">
+            <h2>Save into Library</h2>
+            <label class="checkbox-inline">
+              <input id="persist-to-library" type="checkbox" checked />
+              Keep this paper in my Library
             </label>
-          </div>
+            <p id="library-membership-status" class="muted">
+              Save this paper to Library, then choose which collections it belongs to.
+            </p>
+            <div id="read-paper-collections" class="grid grid-2"></div>
+            <div class="inline-actions">
+              <button id="save-library-membership-btn" type="button" class="secondary">
+                Update Collection Placement
+              </button>
+              <button id="remove-from-library-btn" type="button" class="danger">
+                Remove from Library
+              </button>
+            </div>
+          </section>
         </div>
-        <div id="saved-source-info" class="mini-card muted">
-          Saved source URL and PDF status will appear here after analysis.
-        </div>
-        <div class="inline-actions">
-          <button id="analyze-paper-btn" type="button">Start Analyze</button>
-        </div>
-      </section>
 
-      <section class="panel">
-        <h2>Save into Library</h2>
-        <label class="checkbox-inline">
-          <input id="persist-to-library" type="checkbox" checked />
-          Keep this paper in my Library
-        </label>
-        <p id="library-membership-status" class="muted">
-          Save this paper to Library, then choose which collections it belongs to.
-        </p>
-        <div id="read-paper-collections" class="grid grid-2"></div>
-        <div class="inline-actions">
-          <button id="save-library-membership-btn" type="button" class="secondary">
-            Update Collection Placement
-          </button>
-          <button id="remove-from-library-btn" type="button" class="danger">
-            Remove from Library
-          </button>
-        </div>
-      </section>
+        <div class="read-papers-content stack">
+          <section class="panel">
+            <h2>Analysis Result</h2>
+            <div id="nickname-editor" class="mini-card" hidden>
+              <label>
+                Paper Nickname
+                <input id="paper-nickname-input" type="text" placeholder="Set a nickname for this paper" />
+              </label>
+              <div class="inline-actions">
+                <button id="save-paper-nickname-btn" type="button" class="secondary">Save Nickname</button>
+              </div>
+            </div>
+            <div id="paper-note-editor" class="mini-card" hidden>
+              <label>
+                Personal Notes
+                <textarea id="paper-note-input" rows="4" placeholder="Write your personal notes for this paper..."></textarea>
+              </label>
+              <div class="inline-actions">
+                <button id="save-paper-note-btn" type="button" class="secondary">Save Notes</button>
+              </div>
+            </div>
+            <div id="paper-meta" class="mini-card muted">No paper analyzed yet.</div>
+            <div id="analysis-sections" class="analysis-sections">
+              <p class="muted">Run an analysis to see results.</p>
+            </div>
+            <details class="analysis-raw">
+              <summary>View raw markdown</summary>
+              <pre id="analysis-output" class="ai-output"></pre>
+            </details>
+          </section>
 
-      <section class="panel">
-        <h2>Analysis Result</h2>
-        <div id="nickname-editor" class="mini-card" hidden>
-          <label>
-            Paper Nickname
-            <input id="paper-nickname-input" type="text" placeholder="Set a nickname for this paper" />
-          </label>
-          <div class="inline-actions">
-            <button id="save-paper-nickname-btn" type="button" class="secondary">Save Nickname</button>
-          </div>
-        </div>
-        <div id="paper-meta" class="mini-card muted">No paper analyzed yet.</div>
-        <div id="analysis-sections" class="analysis-sections">
-          <p class="muted">Run an analysis to see results.</p>
-        </div>
-        <details class="analysis-raw">
-          <summary>View raw markdown</summary>
-          <pre id="analysis-output" class="ai-output"></pre>
-        </details>
-      </section>
+          <section class="panel">
+            <h2>Related Paper Recommendations</h2>
+            <p id="related-query" class="muted"></p>
+            <div id="related-papers" class="stack"></div>
+          </section>
 
-      <section class="panel">
-        <h2>Related Paper Recommendations</h2>
-        <p id="related-query" class="muted"></p>
-        <div id="related-papers" class="stack"></div>
-      </section>
-
-      <section class="panel">
-        <h2>Citation</h2>
-        <div id="citation-section" class="stack">
-          <article class="mini-card">
-            <h3>MLA</h3>
-            <pre id="citation-mla" class="ai-output"></pre>
-            <button type="button" class="secondary" data-copy-target="citation-mla">Copy MLA</button>
-          </article>
-          <article class="mini-card">
-            <h3>APA</h3>
-            <pre id="citation-apa" class="ai-output"></pre>
-            <button type="button" class="secondary" data-copy-target="citation-apa">Copy APA</button>
-          </article>
-          <article class="mini-card">
-            <h3>Chicago</h3>
-            <pre id="citation-chicago" class="ai-output"></pre>
-            <button type="button" class="secondary" data-copy-target="citation-chicago">Copy Chicago</button>
-          </article>
+          <section class="panel">
+            <h2>Citation</h2>
+            <div id="citation-section" class="stack citation-grid">
+              <article class="mini-card citation-card">
+                <div class="citation-card-head">
+                  <h3>MLA</h3>
+                  <button type="button" class="secondary" data-copy-target="citation-mla">Copy</button>
+                </div>
+                <pre id="citation-mla" class="ai-output citation-output"></pre>
+              </article>
+              <article class="mini-card citation-card">
+                <div class="citation-card-head">
+                  <h3>APA</h3>
+                  <button type="button" class="secondary" data-copy-target="citation-apa">Copy</button>
+                </div>
+                <pre id="citation-apa" class="ai-output citation-output"></pre>
+              </article>
+              <article class="mini-card citation-card">
+                <div class="citation-card-head">
+                  <h3>Chicago</h3>
+                  <button type="button" class="secondary" data-copy-target="citation-chicago">Copy</button>
+                </div>
+                <pre id="citation-chicago" class="ai-output citation-output"></pre>
+              </article>
+            </div>
+          </section>
         </div>
       </section>
     </main>

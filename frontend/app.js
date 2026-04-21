@@ -6,8 +6,15 @@ const LitLabConfig = {
   supabaseAnonKey: runtimeConfig.supabaseAnonKey || "",
 };
 
+const THEME_STORAGE_KEY = "litlab_theme";
+const LIGHT_THEME = "light";
+const DARK_THEME = "dark";
+const SUN_ICON_URL = "https://img.icons8.com/?size=100&id=60002&format=png&color=FFFFFF";
+const MOON_ICON_URL = "https://img.icons8.com/?size=100&id=59841&format=png&color=000000";
+
 let cachedSupabaseClient = null;
 let refreshInFlight = null;
+let toastTimeoutId = null;
 
 function initSupabaseClient() {
   if (cachedSupabaseClient) {
@@ -182,6 +189,87 @@ function getFrameworkBadgeClass(name) {
   return "badge gray";
 }
 
+function getStoredTheme() {
+  const stored = localStorage.getItem(THEME_STORAGE_KEY);
+  return stored === DARK_THEME || stored === LIGHT_THEME ? stored : "";
+}
+
+function getPreferredTheme() {
+  const stored = getStoredTheme();
+  if (stored) return stored;
+  if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+    return DARK_THEME;
+  }
+  return LIGHT_THEME;
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+}
+
+function getThemeToggleLabel(theme) {
+  return theme === DARK_THEME ? "Switch to Light" : "Switch to Dark";
+}
+
+function getThemeToggleIcon(theme) {
+  const iconUrl = theme === DARK_THEME ? SUN_ICON_URL : MOON_ICON_URL;
+  return `<img src="${iconUrl}" alt="" aria-hidden="true" />`;
+}
+
+function updateThemeToggleButton(button, theme) {
+  const label = getThemeToggleLabel(theme);
+  button.innerHTML = getThemeToggleIcon(theme);
+  button.setAttribute("aria-label", label);
+  button.setAttribute("title", label);
+}
+
+function initThemeToggle() {
+  if (document.querySelector(".theme-toggle-fab")) return;
+
+  let currentTheme = getPreferredTheme();
+  applyTheme(currentTheme);
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "theme-toggle-fab";
+  updateThemeToggleButton(button, currentTheme);
+
+  button.addEventListener("click", () => {
+    currentTheme = currentTheme === DARK_THEME ? LIGHT_THEME : DARK_THEME;
+    applyTheme(currentTheme);
+    localStorage.setItem(THEME_STORAGE_KEY, currentTheme);
+    updateThemeToggleButton(button, currentTheme);
+  });
+
+  document.body.appendChild(button);
+}
+
+function showToast(message = "Copied") {
+  let container = document.querySelector(".toast-container");
+  if (!container) {
+    container = document.createElement("div");
+    container.className = "toast-container";
+    document.body.appendChild(container);
+  }
+
+  let toast = container.querySelector(".toast");
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.className = "toast";
+    container.appendChild(toast);
+  }
+
+  toast.textContent = message;
+  toast.classList.add("visible");
+
+  if (toastTimeoutId) {
+    window.clearTimeout(toastTimeoutId);
+  }
+  toastTimeoutId = window.setTimeout(() => {
+    toast.classList.remove("visible");
+  }, 1600);
+}
+
 function injectGlobalFooter() {
   if (document.querySelector(".site-footer")) return;
 
@@ -189,12 +277,13 @@ function injectGlobalFooter() {
   footerEl.className = "site-footer";
   footerEl.innerHTML = `
     <div class="container">
-      <p>Jack Yu ©️2026. Built with help of Cursor.</p>
+      <p>Jack Yu ©️ 2026. Built with help of Cursor.</p>
     </div>
   `;
   document.body.appendChild(footerEl);
 }
 
+initThemeToggle();
 injectGlobalFooter();
 void getSessionAccessToken();
 
@@ -206,4 +295,5 @@ window.LitLab = {
   requireAuth,
   signOutLocal,
   getFrameworkBadgeClass,
+  showToast,
 };
