@@ -2,27 +2,60 @@ window.LitLab.requireAuth();
 
 const projectsGridEl = document.getElementById("projects-grid");
 const dashboardMessageEl = document.getElementById("dashboard-message");
-const createProjectFormEl = document.getElementById("create-project-form");
 const logoutButtonEl = document.getElementById("logout-btn");
 const emptyStateEl = document.getElementById("empty-state");
 const userEmailEl = document.getElementById("user-email");
 const librarySummaryEl = document.getElementById("library-summary");
 const libraryPreviewEl = document.getElementById("library-preview");
+const collectionsGridEl = document.getElementById("collections-grid");
+const collectionsEmptyEl = document.getElementById("collections-empty-state");
+
+const escapeHtml = (value) =>
+  String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 
 function setMessage(text, tone = "info") {
+  if (!dashboardMessageEl) return;
+  if (!text) {
+    dashboardMessageEl.textContent = "";
+    dashboardMessageEl.hidden = true;
+    return;
+  }
   dashboardMessageEl.textContent = text;
   dashboardMessageEl.className = `message ${tone}`;
+  dashboardMessageEl.hidden = false;
 }
 
-function projectCardTemplate(project) {
+function setLibrarySummary(text, tone = "info") {
+  librarySummaryEl.textContent = text;
+  librarySummaryEl.className = `message ${tone}`;
+}
+
+function pluralize(count, singular, plural = `${singular}s`) {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function projectCardTemplate(project, paperCount) {
   const frameworkClass = window.LitLab.getFrameworkBadgeClass(project.framework_type);
+  const description = project.description || "No description yet.";
+  const goalHtml = project.goal
+    ? `<p class="muted project-card-goal"><strong>Goal:</strong> ${escapeHtml(project.goal)}</p>`
+    : "";
+  const countLabel =
+    typeof paperCount === "number" ? pluralize(paperCount, "paper") : "… papers";
   return `
     <article class="card project-card">
       <div class="card-head">
-        <h3>${project.title}</h3>
-        <span class="${frameworkClass}">${project.framework_type}</span>
+        <h3>${escapeHtml(project.title)}</h3>
+        <span class="${frameworkClass}">${escapeHtml(project.framework_type)}</span>
       </div>
-      <p class="muted">${project.description || "No description yet."}</p>
+      <p class="muted">${escapeHtml(description)}</p>
+      ${goalHtml}
+      <p class="muted project-card-stats"><span class="badge gray">${countLabel}</span></p>
       <div class="project-actions">
         <button data-action="open" data-id="${project.id}">Manage</button>
         <button data-action="delete" data-id="${project.id}" class="danger">Delete</button>
@@ -31,32 +64,108 @@ function projectCardTemplate(project) {
   `;
 }
 
-function setLibrarySummary(text, tone = "info") {
-  librarySummaryEl.textContent = text;
-  librarySummaryEl.className = `message ${tone}`;
-}
-
 function paperPreviewCard(paper) {
   const nickname = (paper.nickname || paper.title || "Untitled").trim();
   const title = (paper.title || "Untitled paper").trim();
   const authors = (paper.authors || []).join(", ") || "Unknown author";
   return `
     <article class="mini-card">
-      <h4>${nickname}</h4>
-      <p class="muted">Title: ${title}</p>
-      <p class="muted">${authors}${paper.year ? ` · ${paper.year}` : ""}</p>
+      <h4>${escapeHtml(nickname)}</h4>
+      <p class="muted">Title: ${escapeHtml(title)}</p>
+      <p class="muted">${escapeHtml(authors)}${paper.year ? ` · ${paper.year}` : ""}</p>
     </article>
   `;
 }
 
+function collectionCardTemplate(collection, paperCount, isPrimaryForAnyProject) {
+  const visibility = collection.visibility || "private";
+  const visibilityClass = visibility === "public" ? "violet" : visibility === "link" ? "teal" : "gray";
+  const primaryBadge = isPrimaryForAnyProject
+    ? `<span class="badge primary-badge">Primary</span>`
+    : "";
+  const countLabel =
+    typeof paperCount === "number" ? pluralize(paperCount, "paper") : "… papers";
+  const description = collection.description
+    ? `<p class="muted">${escapeHtml(collection.description)}</p>`
+    : "";
+  return `
+    <article class="card collection-card">
+      <div class="card-head">
+        <h3>${escapeHtml(collection.title || "Untitled collection")}</h3>
+        <span class="badge ${visibilityClass}">${escapeHtml(visibility)}</span>
+      </div>
+      ${description}
+      <p class="muted collection-card-stats">
+        <span class="badge gray">${countLabel}</span>
+        ${primaryBadge}
+      </p>
+      <div class="project-actions">
+        <a class="button secondary" href="library.html">Open in Library</a>
+      </div>
+    </article>
+  `;
+}
+
+async function fetchCollectionPaperCount(collectionId) {
+  try {
+    const response = await window.LitLab.apiFetch(`/collections/${collectionId}/papers`);
+    return (response.papers || []).length;
+  } catch (_error) {
+    return null;
+  }
+}
+
+async function fetchProjectPaperCount(projectId) {
+  try {
+    const response = await window.LitLab.apiFetch(`/projects/${projectId}/papers`);
+    return (response.papers || []).length;
+  } catch (_error) {
+    return null;
+  }
+}
+
+async function fetchPrimaryCollectionIdsByProject() {
+  // Returns a Set of collection IDs that serve as some project's primary list.
+  try {
+    const projectsResponse = await window.LitLab.apiFetch("/projects");
+    const projects = projectsResponse.projects || [];
+    const primaryLookups = await Promise.all(
+      projects.map(async (project) => {
+        try {
+          const linkResponse = await window.LitLab.apiFetch(
+            `/projects/${project.id}/primary-collection`
+          );
+          return linkResponse.collection?.id || null;
+        } catch (_error) {
+          return null;
+        }
+      })
+    );
+    return new Set(primaryLookups.filter(Boolean));
+  } catch (_error) {
+    return new Set();
+  }
+}
+
 async function loadProjects() {
-  setMessage("Loading projects...");
+  setMessage("");
   try {
     const response = await window.LitLab.apiFetch("/projects");
     const projects = response.projects || [];
-    projectsGridEl.innerHTML = projects.map(projectCardTemplate).join("");
-    emptyStateEl.hidden = projects.length > 0;
-    setMessage(projects.length ? "Projects loaded." : "No projects yet. Create your first one.", "success");
+    if (!projects.length) {
+      projectsGridEl.innerHTML = "";
+      emptyStateEl.hidden = false;
+      return;
+    }
+    emptyStateEl.hidden = true;
+    projectsGridEl.innerHTML = projects
+      .map((project) => projectCardTemplate(project, undefined))
+      .join("");
+
+    const counts = await Promise.all(projects.map((project) => fetchProjectPaperCount(project.id)));
+    projectsGridEl.innerHTML = projects
+      .map((project, index) => projectCardTemplate(project, counts[index]))
+      .join("");
   } catch (error) {
     setMessage(error.message || "Could not load projects.", "error");
   }
@@ -65,8 +174,13 @@ async function loadProjects() {
 async function loadLibraryOverview() {
   setLibrarySummary("Loading library overview...");
   try {
-    const response = await window.LitLab.apiFetch("/papers?limit=5&offset=0");
-    const papers = response.papers || [];
+    const [papersResponse, collectionsResponse] = await Promise.all([
+      window.LitLab.apiFetch("/papers?limit=5&offset=0"),
+      window.LitLab.apiFetch("/collections"),
+    ]);
+    const papers = papersResponse.papers || [];
+    const collections = collectionsResponse.collections || [];
+
     if (!papers.length) {
       libraryPreviewEl.innerHTML = "<p class='muted'>No papers yet. Add one from Read Papers.</p>";
       setLibrarySummary("Your library is empty.", "warning");
@@ -74,41 +188,47 @@ async function loadLibraryOverview() {
     }
 
     libraryPreviewEl.innerHTML = papers.slice(0, 3).map(paperPreviewCard).join("");
-    setLibrarySummary(`Latest ${Math.min(papers.length, 5)} papers loaded from your library.`, "success");
+    const paperLabel = pluralize(papers.length, "recent paper");
+    const collectionLabel = pluralize(collections.length, "collection");
+    setLibrarySummary(
+      `${paperLabel} shown · ${collectionLabel} in your workspace.`,
+      "success"
+    );
   } catch (error) {
     libraryPreviewEl.innerHTML = "<p class='muted'>Could not load library preview.</p>";
     setLibrarySummary(error.message || "Could not load library overview.", "error");
   }
 }
 
-createProjectFormEl.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const formData = new FormData(createProjectFormEl);
-  const title = String(formData.get("title") || "").trim();
-  const description = String(formData.get("description") || "").trim();
-  const frameworkType = String(formData.get("framework_type") || "").trim();
-  if (!title || !frameworkType) {
-    setMessage("Title and framework are required.", "error");
-    return;
-  }
-
-  setMessage("Creating project...");
+async function loadCollections() {
   try {
-    await window.LitLab.apiFetch("/projects", {
-      method: "POST",
-      body: JSON.stringify({
-        title,
-        description,
-        framework_type: frameworkType,
-      }),
-    });
-    createProjectFormEl.reset();
-    setMessage("Project created.", "success");
-    await loadProjects();
+    const response = await window.LitLab.apiFetch("/collections");
+    const collections = response.collections || [];
+    if (!collections.length) {
+      collectionsGridEl.innerHTML = "";
+      collectionsEmptyEl.hidden = false;
+      return;
+    }
+    collectionsEmptyEl.hidden = true;
+    collectionsGridEl.innerHTML = collections
+      .map((collection) => collectionCardTemplate(collection, undefined, false))
+      .join("");
+
+    const [counts, primarySet] = await Promise.all([
+      Promise.all(collections.map((collection) => fetchCollectionPaperCount(collection.id))),
+      fetchPrimaryCollectionIdsByProject(),
+    ]);
+    collectionsGridEl.innerHTML = collections
+      .map((collection, index) =>
+        collectionCardTemplate(collection, counts[index], primarySet.has(collection.id))
+      )
+      .join("");
   } catch (error) {
-    setMessage(error.message || "Could not create project.", "error");
+    collectionsGridEl.innerHTML = `<p class='message error'>${escapeHtml(
+      error.message || "Could not load collections."
+    )}</p>`;
   }
-});
+}
 
 projectsGridEl.addEventListener("click", async (event) => {
   const target = event.target;
@@ -131,7 +251,7 @@ projectsGridEl.addEventListener("click", async (event) => {
     try {
       await window.LitLab.apiFetch(`/projects/${projectId}`, { method: "DELETE" });
       setMessage("Project deleted.", "success");
-      await loadProjects();
+      await Promise.all([loadProjects(), loadCollections()]);
     } catch (error) {
       setMessage(error.message || "Could not delete project.", "error");
     }
@@ -166,4 +286,5 @@ async function loadWelcomeIdentity() {
 
 loadWelcomeIdentity();
 loadProjects();
+loadCollections();
 loadLibraryOverview();

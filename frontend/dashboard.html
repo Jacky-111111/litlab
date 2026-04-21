@@ -23,36 +23,7 @@
       </div>
     </header>
 
-    <main class="container section dashboard-layout">
-      <section class="panel">
-        <h2>Create Project</h2>
-        <form id="create-project-form">
-          <label>
-            Title
-            <input name="title" type="text" required placeholder="e.g., Climate migration patterns" />
-          </label>
-          <label>
-            Description
-            <textarea name="description" rows="4" placeholder="What are you trying to learn?"></textarea>
-          </label>
-          <label>
-            Framework
-            <select name="framework_type" required>
-              <option value="IMRAD">IMRAD</option>
-              <option value="Review / Survey">Review / Survey</option>
-              <option value="Theoretical Paper">Theoretical Paper</option>
-              <option value="Case Study">Case Study</option>
-            </select>
-          </label>
-          <button type="submit">Create Project</button>
-        </form>
-        <p class="muted">
-          A primary reading list is created automatically so you can start saving papers right away.
-          Your Library stays one aggregate view across every project and collection.
-        </p>
-        <p id="dashboard-message" class="message info">Ready to build your research plan.</p>
-      </section>
-
+    <main class="container section dashboard-single">
       <section class="stack">
         <article class="panel">
           <h2>Read Papers</h2>
@@ -77,9 +48,29 @@
         </article>
 
         <article class="panel">
-          <h2>Your Projects</h2>
-          <p id="empty-state" class="muted">You have no projects yet.</p>
+          <h2>Your Collections</h2>
+          <p class="muted">
+            Collections are reusable reading lists. A project's primary collection shows a badge.
+          </p>
+          <p id="collections-empty-state" class="muted" hidden>No collections yet.</p>
+          <div id="collections-grid" class="grid grid-2"></div>
+        </article>
+
+        <article class="panel">
+          <div class="card-head">
+            <h2>Your Projects</h2>
+            <a class="button" href="projects.html#create" aria-label="Create a new project">+ Create Project</a>
+          </div>
+          <p id="dashboard-message" class="message info" hidden></p>
+          <p id="empty-state" class="muted">
+            You have no projects yet.
+            <a href="projects.html#create">Create your first project</a>.
+          </p>
           <div id="projects-grid" class="grid grid-2"></div>
+          <p class="muted">
+            Need to edit framework, goal, or status? Head to the
+            <a href="projects.html">Projects page</a>.
+          </p>
         </article>
 
         <article class="panel">

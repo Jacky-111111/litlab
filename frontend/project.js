@@ -21,11 +21,26 @@ const recommendBtn = document.getElementById("btn-recommend");
 const relatedPapersEl = document.getElementById("related-papers");
 const paperNoteInputEl = document.getElementById("selected-paper-note");
 const savePaperNoteBtn = document.getElementById("save-selected-paper-note");
+const libraryPickerToggleBtn = document.getElementById("library-picker-toggle");
+const libraryPickerBodyEl = document.getElementById("library-picker-body");
+const libraryPickerSourceEl = document.getElementById("library-picker-source");
+const libraryPickerFilterEl = document.getElementById("library-picker-filter");
+const libraryPickerResultsEl = document.getElementById("library-picker-results");
+const libraryPickerMessageEl = document.getElementById("library-picker-message");
+const libraryPickerSelectAllBtn = document.getElementById("library-picker-select-all");
+const libraryPickerClearBtn = document.getElementById("library-picker-clear");
+const libraryPickerAddBtn = document.getElementById("library-picker-add");
 
 let selectedPaper = null;
 let attachedCollections = [];
 let primaryCollectionId = null;
 const searchPaperMap = new Map();
+
+let libraryPickerSource = "library";
+let libraryPickerPapers = [];
+const libraryPickerSelection = new Set();
+const projectPaperIdSet = new Set();
+let allCollectionsCache = [];
 
 function setMessage(text, tone = "info") {
   projectMessageEl.textContent = text;
@@ -137,9 +152,14 @@ async function loadSavedPapers() {
   try {
     const response = await window.LitLab.apiFetch(`/projects/${projectId}/papers`);
     const papers = response.papers || [];
+    projectPaperIdSet.clear();
+    papers.forEach((paper) => {
+      if (paper.id) projectPaperIdSet.add(paper.id);
+    });
     if (!papers.length) {
       savedPapersEl.innerHTML = "<p class='muted'>No saved papers yet.</p>";
       selectedPaper = null;
+      renderLibraryPickerResults();
       return;
     }
     savedPapersEl.innerHTML = papers.map((paper) => paperCard(paper, false)).join("");
@@ -148,6 +168,7 @@ async function loadSavedPapers() {
       aiOutputEl.textContent = `Selected paper: ${selectedPaper.title}`;
       loadSelectedPaperNote();
     }
+    renderLibraryPickerResults();
   } catch (error) {
     savedPapersEl.innerHTML = `<p class='message error'>${error.message || "Could not load saved papers."}</p>`;
   }
@@ -389,6 +410,214 @@ savePaperNoteBtn.addEventListener("click", async () => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// Add-papers-from-Library picker
+// ---------------------------------------------------------------------------
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function setPickerMessage(text, tone = "info") {
+  if (!libraryPickerMessageEl) return;
+  if (!text) {
+    libraryPickerMessageEl.textContent = "";
+    libraryPickerMessageEl.hidden = true;
+    return;
+  }
+  libraryPickerMessageEl.textContent = text;
+  libraryPickerMessageEl.className = `message ${tone}`;
+  libraryPickerMessageEl.hidden = false;
+}
+
+function pickerPaperCard(paper) {
+  const alreadyInProject = paper.id && projectPaperIdSet.has(paper.id);
+  const checked = libraryPickerSelection.has(paper.id) ? "checked" : "";
+  const disabled = alreadyInProject ? "disabled" : "";
+  const authors = (paper.authors || []).join(", ") || "Unknown author";
+  const source = paper.source || "Unknown source";
+  const metaParts = [authors];
+  if (paper.year) metaParts.push(String(paper.year));
+  metaParts.push(escapeHtml(source));
+  return `
+    <article class="card paper-card paper-picker-row${alreadyInProject ? " disabled" : ""}" data-paper-id="${escapeHtml(paper.id || "")}">
+      <label class="checkbox-inline paper-picker-check">
+        <input type="checkbox" data-action="picker-select" value="${escapeHtml(paper.id || "")}" ${checked} ${disabled} />
+        <span>
+          <strong>${escapeHtml(paper.title || "Untitled")}</strong>
+          ${alreadyInProject ? "<span class='badge gray'>In project</span>" : ""}
+        </span>
+      </label>
+      <p class="muted paper-picker-meta">${escapeHtml(metaParts.join(" · "))}</p>
+    </article>
+  `;
+}
+
+function getFilteredPickerPapers() {
+  const filter = (libraryPickerFilterEl?.value || "").trim().toLowerCase();
+  if (!filter) return libraryPickerPapers;
+  return libraryPickerPapers.filter((paper) => {
+    const titleMatch = String(paper.title || "").toLowerCase().includes(filter);
+    const authorMatch = (paper.authors || [])
+      .join(" ")
+      .toLowerCase()
+      .includes(filter);
+    return titleMatch || authorMatch;
+  });
+}
+
+function renderLibraryPickerResults() {
+  if (!libraryPickerResultsEl) return;
+  const papers = getFilteredPickerPapers();
+  if (!libraryPickerPapers.length) {
+    libraryPickerResultsEl.innerHTML =
+      "<p class='muted'>No papers available from this source.</p>";
+    return;
+  }
+  if (!papers.length) {
+    libraryPickerResultsEl.innerHTML = "<p class='muted'>No matches for this filter.</p>";
+    return;
+  }
+  libraryPickerResultsEl.innerHTML = papers.map(pickerPaperCard).join("");
+}
+
+async function loadPickerPapers() {
+  setPickerMessage("Loading papers...");
+  libraryPickerResultsEl.innerHTML = "<p class='muted'>Loading...</p>";
+  try {
+    let papers = [];
+    if (libraryPickerSource === "library") {
+      const response = await window.LitLab.apiFetch("/papers?limit=100&offset=0");
+      papers = response.papers || [];
+    } else {
+      const response = await window.LitLab.apiFetch(
+        `/collections/${libraryPickerSource}/papers`
+      );
+      papers = response.papers || [];
+    }
+    libraryPickerPapers = papers;
+    for (const id of Array.from(libraryPickerSelection)) {
+      if (!papers.find((p) => p.id === id)) libraryPickerSelection.delete(id);
+    }
+    renderLibraryPickerResults();
+    setPickerMessage(
+      `${papers.length} paper${papers.length === 1 ? "" : "s"} available.`,
+      "success"
+    );
+  } catch (error) {
+    libraryPickerPapers = [];
+    renderLibraryPickerResults();
+    setPickerMessage(error.message || "Could not load papers.", "error");
+  }
+}
+
+function populatePickerSourceOptions() {
+  if (!libraryPickerSourceEl) return;
+  const previousValue = libraryPickerSourceEl.value || "library";
+  const collectionOptions = allCollectionsCache
+    .map(
+      (collection) =>
+        `<option value="${escapeHtml(collection.id)}">${escapeHtml(
+          collection.title || "Untitled"
+        )}</option>`
+    )
+    .join("");
+  libraryPickerSourceEl.innerHTML = `
+    <option value="library">All Library papers</option>
+    ${collectionOptions ? `<optgroup label="Collections">${collectionOptions}</optgroup>` : ""}
+  `;
+  libraryPickerSourceEl.value = allCollectionsCache.find((c) => c.id === previousValue)
+    ? previousValue
+    : "library";
+  libraryPickerSource = libraryPickerSourceEl.value;
+}
+
+async function loadCollectionsForPicker() {
+  try {
+    const response = await window.LitLab.apiFetch("/collections");
+    allCollectionsCache = response.collections || [];
+  } catch (_error) {
+    allCollectionsCache = [];
+  }
+  populatePickerSourceOptions();
+}
+
+libraryPickerToggleBtn?.addEventListener("click", async () => {
+  const willOpen = libraryPickerBodyEl.hidden;
+  libraryPickerBodyEl.hidden = !willOpen;
+  libraryPickerToggleBtn.textContent = willOpen ? "Close Picker" : "Open Picker";
+  if (willOpen && !libraryPickerPapers.length) {
+    await loadPickerPapers();
+  }
+});
+
+libraryPickerSourceEl?.addEventListener("change", async () => {
+  libraryPickerSource = libraryPickerSourceEl.value;
+  libraryPickerSelection.clear();
+  await loadPickerPapers();
+});
+
+libraryPickerFilterEl?.addEventListener("input", () => {
+  renderLibraryPickerResults();
+});
+
+libraryPickerResultsEl?.addEventListener("change", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  if (target.dataset.action !== "picker-select") return;
+  const paperId = target.value;
+  if (!paperId) return;
+  if (target.checked) libraryPickerSelection.add(paperId);
+  else libraryPickerSelection.delete(paperId);
+});
+
+libraryPickerSelectAllBtn?.addEventListener("click", () => {
+  const visible = getFilteredPickerPapers();
+  visible.forEach((paper) => {
+    if (paper.id && !projectPaperIdSet.has(paper.id)) libraryPickerSelection.add(paper.id);
+  });
+  renderLibraryPickerResults();
+});
+
+libraryPickerClearBtn?.addEventListener("click", () => {
+  libraryPickerSelection.clear();
+  renderLibraryPickerResults();
+});
+
+libraryPickerAddBtn?.addEventListener("click", async () => {
+  const collectionId = ensurePrimaryCollectionId();
+  if (!collectionId) return;
+  const paperIds = Array.from(libraryPickerSelection).filter(
+    (id) => !projectPaperIdSet.has(id)
+  );
+  if (!paperIds.length) {
+    setPickerMessage("Select at least one paper that is not already in the project.", "warning");
+    return;
+  }
+  setPickerMessage(`Adding ${paperIds.length} paper(s) to the primary reading list...`);
+  try {
+    const response = await window.LitLab.apiFetch(
+      `/collections/${collectionId}/papers:batchAdd`,
+      {
+        method: "POST",
+        body: JSON.stringify({ paper_ids: paperIds }),
+      }
+    );
+    const added = Array.isArray(response.added) ? response.added.length : paperIds.length;
+    setPickerMessage(`Added ${added} paper(s) to the primary reading list.`, "success");
+    libraryPickerSelection.clear();
+    await loadSavedPapers();
+  } catch (error) {
+    setPickerMessage(error.message || "Could not add papers.", "error");
+  }
+});
+
 loadProjectDetail();
 loadAttachedCollections();
 loadSavedPapers();
+loadCollectionsForPicker();

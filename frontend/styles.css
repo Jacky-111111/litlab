@@ -318,6 +318,96 @@ label {
   align-items: start;
 }
 
+.dashboard-single {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  width: min(1120px, 92vw);
+  margin: 0 auto;
+}
+
+.project-row-main {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.project-row-title {
+  margin: 0;
+  font-size: 1.15rem;
+  overflow-wrap: anywhere;
+}
+
+.project-row-title-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 1.05rem;
+  padding: 0.5rem 0.7rem;
+}
+
+.project-row-badges {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.project-row-description-view,
+.project-row-goal-view {
+  margin: 0.3rem 0;
+}
+
+.project-edit-panel {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.6rem 0.8rem;
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  margin: 0.4rem 0 0.6rem;
+}
+
+.project-edit-panel textarea,
+.project-edit-panel select {
+  width: 100%;
+}
+
+.paper-picker-row {
+  padding: 0.6rem 0.8rem;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  margin: 0;
+}
+
+.paper-picker-row.disabled {
+  opacity: 0.55;
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.paper-picker-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.paper-picker-check input[type="checkbox"] {
+  margin-top: 0.3rem;
+}
+
+.paper-picker-check span {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.paper-picker-meta {
+  margin: 0.35rem 0 0 1.55rem;
+  font-size: 0.88rem;
+}
+
 .project-layout {
   display: grid;
   grid-template-columns: 1fr;
@@ -648,6 +738,18 @@ label {
   background: #e5eeff;
   color: #1942a1;
   border-color: #c8d6f3;
+}
+
+.project-card-stats,
+.collection-card-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.2rem 0 0;
+}
+
+.project-card-goal {
+  margin: 0.2rem 0 0;
 }
 
 .mini-card {

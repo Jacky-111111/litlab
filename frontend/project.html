@@ -50,6 +50,42 @@
         <div id="project-reading-lists" class="stack"></div>
       </section>
 
+      <section class="panel" id="library-picker-panel">
+        <div class="card-head">
+          <h2>Add Papers from Library</h2>
+          <button id="library-picker-toggle" type="button" class="secondary">Open Picker</button>
+        </div>
+        <p class="muted">
+          Pick papers you already have in your Library (or in another Collection) and add them to
+          this project's primary reading list.
+        </p>
+        <div id="library-picker-body" hidden>
+          <div class="grid grid-2">
+            <label>
+              Source
+              <select id="library-picker-source">
+                <option value="library">All Library papers</option>
+              </select>
+            </label>
+            <label>
+              Filter
+              <input
+                type="text"
+                id="library-picker-filter"
+                placeholder="Filter by title or author..."
+              />
+            </label>
+          </div>
+          <p id="library-picker-message" class="message info" hidden></p>
+          <div id="library-picker-results" class="stack"></div>
+          <div class="inline-actions">
+            <button id="library-picker-select-all" type="button" class="secondary">Select all visible</button>
+            <button id="library-picker-clear" type="button" class="secondary">Clear selection</button>
+            <button id="library-picker-add" type="button">Add selected to primary list</button>
+          </div>
+        </div>
+      </section>
+
       <section class="two-col">
         <article class="panel">
           <h2>Search Papers</h2>

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LitLab | Projects</title>
+    <link rel="icon" type="image/png" href="https://img.icons8.com/?size=100&id=aOIjONBdomrC&format=png&color=000000" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="config.js"></script>
+    <script defer src="app.js"></script>
+    <script defer src="projects.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="container">
+        <a class="brand" href="dashboard.html">LitLab</a>
+        <a class="button secondary" href="dashboard.html">Back to Dashboard</a>
+      </div>
+    </header>
+
+    <main class="container section project-layout">
+      <header class="library-header">
+        <h1>Projects</h1>
+        <p class="muted">Create a research workspace and manage framework, goal, and status in one place.</p>
+      </header>
+
+      <section class="panel" id="create-project-panel">
+        <h2>Create Project</h2>
+        <form id="create-project-form">
+          <div class="grid grid-2">
+            <label>
+              Title
+              <input name="title" type="text" required placeholder="e.g., Climate migration patterns" />
+            </label>
+            <label>
+              Framework
+              <select name="framework_type" required>
+                <option value="IMRAD">IMRAD</option>
+                <option value="Review / Survey">Review / Survey</option>
+                <option value="Theoretical Paper">Theoretical Paper</option>
+                <option value="Case Study">Case Study</option>
+              </select>
+            </label>
+          </div>
+          <label>
+            Description
+            <textarea name="description" rows="2" placeholder="What are you trying to learn?"></textarea>
+          </label>
+          <label>
+            Research goal <span class="muted">(optional)</span>
+            <textarea name="goal" rows="2" placeholder="e.g., Map how climate migration is framed in K-12 education research."></textarea>
+          </label>
+          <div class="inline-actions">
+            <button type="submit">Create Project</button>
+            <button type="reset" class="secondary">Clear</button>
+          </div>
+        </form>
+        <p class="muted">
+          Each new project automatically creates a primary reading list. Your Library remains the
+          aggregate view across every project and collection.
+        </p>
+        <p id="create-message" class="message info" hidden></p>
+      </section>
+
+      <section class="panel">
+        <div class="card-head">
+          <h2>Your Projects</h2>
+          <span id="projects-count" class="muted"></span>
+        </div>
+        <p id="projects-empty-state" class="muted" hidden>You have no projects yet. Create your first one above.</p>
+        <p id="list-message" class="message info" hidden></p>
+        <div id="projects-grid" class="stack"></div>
+      </section>
+    </main>
+  </body>
+</html>
