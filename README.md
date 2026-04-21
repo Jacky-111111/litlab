@@ -1,6 +1,6 @@
 # LitLab
 
-LitLab is a beginner-friendly AI-powered research assistant that helps students create research projects, search and save academic papers, and understand literature through summaries, explanations, and comprehension questions.
+LitLab is a beginner-friendly AI-powered research assistant that helps students create research projects, build a persistent paper library, save notes, and understand literature through reusable AI analysis.
 
 ## MVP Features
 
@@ -12,7 +12,10 @@ LitLab is a beginner-friendly AI-powered research assistant that helps students 
   - `Case Study`
 - Framework-specific guidance with explanation and prompt per section.
 - Paper search through Semantic Scholar (normalized response format).
-- Save papers into project reading lists with duplicate prevention per project.
+- Paper library where each paper is stored once per user and can be added to multiple collections.
+- Global per-paper notes synced to backend.
+- URL/PDF analysis persistence with AI cache (summary/explain/quiz/related).
+- Batch add papers to multiple collections.
 - AI paper actions through backend OpenAI integration:
   - Summary
   - Beginner explanation
@@ -34,16 +37,21 @@ litlab/
 ├── frontend/
 │   ├── index.html
 │   ├── dashboard.html
+│   ├── library.html
 │   ├── project.html
+│   ├── read-papers.html
 │   ├── styles.css
 │   ├── config.js
 │   ├── app.js
 │   ├── auth.js
 │   ├── dashboard.js
-│   └── project.js
+│   ├── library.js
+│   ├── project.js
+│   └── read-papers.js
 ├── backend/
 │   ├── main.py
 │   ├── requirements.txt
+│   ├── supabase_schema.sql
 │   ├── routes/
 │   ├── services/
 │   ├── prompts/
@@ -55,7 +63,9 @@ litlab/
 
 ## Supabase Setup
 
-Create these tables in Supabase:
+Run [`backend/supabase_schema.sql`](backend/supabase_schema.sql) in Supabase SQL editor.
+
+Core tables include:
 
 ### `projects`
 
@@ -67,24 +77,47 @@ Create these tables in Supabase:
 - `created_at` (timestamptz)
 - `updated_at` (timestamptz)
 
-### `saved_papers`
+### `papers`
 
 - `id` (uuid, primary key, default `gen_random_uuid()`)
-- `project_id` (uuid, not null, references `projects.id`)
-- `external_paper_id` (text, not null)
+- `user_id` (uuid, not null)
 - `source` (text, not null)
+- `external_paper_id` (text, nullable)
 - `title` (text, not null)
-- `authors` (jsonb or text[])
+- `authors_json` (jsonb)
 - `year` (int)
 - `abstract` (text)
-- `url` (text)
-- `created_at` (timestamptz default `now()`)
+- `canonical_url` (text)
+- `pdf_storage_path` (text, nullable)
+- `content_hash` (text, nullable)
+- `created_at`, `updated_at` (timestamptz)
 
-Recommended unique constraint:
+### `collection_papers`
 
-- (`project_id`, `external_paper_id`)
+- `collection_id` (uuid, references `projects.id`)
+- `paper_id` (uuid, references `papers.id`)
+- `added_at`
+- `added_by`
+
+### `paper_notes`
+
+- `paper_id` (uuid)
+- `user_id` (uuid)
+- `content` (text)
+- `updated_at`
+
+### `paper_ai_cache`
+
+- `paper_id` (uuid)
+- `user_id` (uuid)
+- `kind` (`summary`, `explain`, `quiz`, `recommend`, `analysis`)
+- `model`
+- `prompt_hash`
+- `payload_json`
+- `created_at`, `updated_at`
 
 Enable row-level security and scope rows to authenticated user ownership through `projects.user_id`.
+Also create storage bucket `paper-pdfs` for uploaded PDF persistence (included in SQL file).
 
 ## Environment Variables
 
@@ -96,6 +129,10 @@ Copy `.env.example` to `.env` and fill values:
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `CORS_ORIGINS`
+- `SUPABASE_PDF_BUCKET` (optional, default: `paper-pdfs`)
+- `AI_RATE_LIMIT_WINDOW_SECONDS` (optional, default: `60`)
+- `AI_RATE_LIMIT_REQUESTS` (optional, default: `20`)
+- `AI_DAILY_CACHE_WRITES` (optional, default: `120`)
 
 ## Run Locally
 

@@ -11,14 +11,18 @@ const notesFormEl = document.getElementById("framework-notes-form");
 const savedPapersEl = document.getElementById("saved-papers");
 const searchFormEl = document.getElementById("search-form");
 const searchResultsEl = document.getElementById("search-results");
+const batchSaveSearchBtn = document.getElementById("batch-save-search-btn");
 const aiOutputEl = document.getElementById("ai-output");
 const summarizeBtn = document.getElementById("btn-summarize");
 const explainBtn = document.getElementById("btn-explain");
 const quizBtn = document.getElementById("btn-quiz");
 const recommendBtn = document.getElementById("btn-recommend");
 const relatedPapersEl = document.getElementById("related-papers");
+const paperNoteInputEl = document.getElementById("selected-paper-note");
+const savePaperNoteBtn = document.getElementById("save-selected-paper-note");
 
 let selectedPaper = null;
+const searchPaperMap = new Map();
 
 function setMessage(text, tone = "info") {
   projectMessageEl.textContent = text;
@@ -64,15 +68,23 @@ function renderGuidance(guidance) {
 }
 
 function paperCard(paper, includeSave = false) {
+  const paperKey = includeSave
+    ? [paper.external_paper_id || "", paper.title || "", paper.source || ""].join("::")
+    : paper.id || paper.external_paper_id || "";
   const authors = (paper.authors || []).join(", ") || "Unknown author";
   const abstract = paper.abstract || "No abstract available for this paper.";
   const abstractSnippet = abstract.length > 280 ? `${abstract.slice(0, 280)}...` : abstract;
   return `
-    <article class="card paper-card" data-paper-id="${paper.external_paper_id || paper.id}">
+    <article class="card paper-card" data-paper-id="${paper.id || paper.external_paper_id || ""}" data-paper-key="${paperKey}">
       <h4>${paper.title}</h4>
       <p class="muted">${authors} ${paper.year ? `· ${paper.year}` : ""} · ${paper.source || "Unknown source"}</p>
       <p>${abstractSnippet}</p>
       <div class="paper-actions">
+        ${
+          includeSave
+            ? `<label class="checkbox-inline"><input type="checkbox" data-action="batch-save-paper" value="${paperKey}" /> Select</label>`
+            : ""
+        }
         ${paper.url ? `<a class="secondary" href="${paper.url}" target="_blank" rel="noopener noreferrer">Open Source</a>` : ""}
         ${
           includeSave
@@ -84,6 +96,19 @@ function paperCard(paper, includeSave = false) {
       </div>
     </article>
   `;
+}
+
+async function loadSelectedPaperNote() {
+  if (!selectedPaper?.id) {
+    paperNoteInputEl.value = "";
+    return;
+  }
+  try {
+    const response = await window.LitLab.apiFetch(`/papers/${selectedPaper.id}`);
+    paperNoteInputEl.value = response.note?.content || "";
+  } catch (_error) {
+    paperNoteInputEl.value = "";
+  }
 }
 
 async function loadProjectDetail() {
@@ -118,6 +143,7 @@ async function loadSavedPapers() {
     if (!selectedPaper) {
       selectedPaper = papers[0];
       aiOutputEl.textContent = `Selected paper: ${selectedPaper.title}`;
+      loadSelectedPaperNote();
     }
   } catch (error) {
     savedPapersEl.innerHTML = `<p class='message error'>${error.message || "Could not load saved papers."}</p>`;
@@ -138,6 +164,11 @@ searchFormEl.addEventListener("submit", async (event) => {
   try {
     const response = await window.LitLab.apiFetch(`/papers/search?q=${encodeURIComponent(query)}`);
     const papers = response.papers || [];
+    searchPaperMap.clear();
+    papers.forEach((paper) => {
+      const key = [paper.external_paper_id || "", paper.title || "", paper.source || ""].join("::");
+      searchPaperMap.set(key, paper);
+    });
     if (!papers.length) {
       searchResultsEl.innerHTML = "<p class='muted'>No papers found for this search.</p>";
       setMessage("No papers found.", "warning");
@@ -161,9 +192,12 @@ searchResultsEl.addEventListener("click", async (event) => {
 
   try {
     const paper = JSON.parse(paperJson);
-    await window.LitLab.apiFetch(`/projects/${projectId}/papers`, {
+    await window.LitLab.apiFetch("/papers/ingest", {
       method: "POST",
-      body: JSON.stringify(paper),
+      body: JSON.stringify({
+        ...paper,
+        collection_ids: [projectId],
+      }),
     });
     setMessage("Paper saved to project.", "success");
     await loadSavedPapers();
@@ -182,6 +216,7 @@ savedPapersEl.addEventListener("click", (event) => {
   selectedPaper = JSON.parse(paperJson);
   aiOutputEl.textContent = `Selected paper: ${selectedPaper.title}`;
   relatedPapersEl.innerHTML = "";
+  loadSelectedPaperNote();
 });
 
 notesFormEl.addEventListener("input", (event) => {
@@ -199,11 +234,18 @@ async function runAiAction(endpoint) {
   }
   aiOutputEl.textContent = "Generating...";
   try {
-    const response = await window.LitLab.apiFetch(`/ai/${endpoint}`, {
-      method: "POST",
-      body: JSON.stringify({ paper: selectedPaper }),
-    });
-    aiOutputEl.textContent = response.output;
+    if (selectedPaper.id) {
+      const response = await window.LitLab.apiFetch(`/ai/papers/${selectedPaper.id}/${endpoint}`, {
+        method: "POST",
+      });
+      aiOutputEl.textContent = response.output || "No output returned.";
+    } else {
+      const response = await window.LitLab.apiFetch(`/ai/${endpoint}`, {
+        method: "POST",
+        body: JSON.stringify({ paper: selectedPaper }),
+      });
+      aiOutputEl.textContent = response.output;
+    }
     setMessage("AI response generated.", "success");
   } catch (error) {
     aiOutputEl.textContent = "";
@@ -222,10 +264,12 @@ recommendBtn.addEventListener("click", async () => {
   }
   relatedPapersEl.innerHTML = "<p class='muted'>Finding related papers...</p>";
   try {
-    const response = await window.LitLab.apiFetch("/ai/recommend", {
-      method: "POST",
-      body: JSON.stringify({ paper: selectedPaper }),
-    });
+    const response = selectedPaper.id
+      ? await window.LitLab.apiFetch(`/ai/papers/${selectedPaper.id}/recommend`, { method: "POST" })
+      : await window.LitLab.apiFetch("/ai/recommend", {
+          method: "POST",
+          body: JSON.stringify({ paper: selectedPaper }),
+        });
     const papers = response.papers || [];
     if (!papers.length) {
       relatedPapersEl.innerHTML = "<p class='muted'>No related papers found.</p>";
@@ -237,6 +281,51 @@ recommendBtn.addEventListener("click", async () => {
     `;
   } catch (error) {
     relatedPapersEl.innerHTML = `<p class='message error'>${error.message || "Recommendation failed."}</p>`;
+  }
+});
+
+batchSaveSearchBtn.addEventListener("click", async () => {
+  const checked = Array.from(searchResultsEl.querySelectorAll('input[data-action="batch-save-paper"]:checked'));
+  if (!checked.length) {
+    setMessage("Select at least one search result.", "warning");
+    return;
+  }
+  setMessage("Saving selected papers...");
+  try {
+    await Promise.all(
+      checked.map((inputNode) => {
+        const key = inputNode.value;
+        const paper = searchPaperMap.get(key);
+        if (!paper) return Promise.resolve();
+        return window.LitLab.apiFetch("/papers/ingest", {
+          method: "POST",
+          body: JSON.stringify({
+            ...paper,
+            collection_ids: [projectId],
+          }),
+        });
+      })
+    );
+    setMessage(`Saved ${checked.length} paper(s) to this collection.`, "success");
+    await loadSavedPapers();
+  } catch (error) {
+    setMessage(error.message || "Could not batch save papers.", "error");
+  }
+});
+
+savePaperNoteBtn.addEventListener("click", async () => {
+  if (!selectedPaper?.id) {
+    setMessage("Select a saved paper first.", "warning");
+    return;
+  }
+  try {
+    await window.LitLab.apiFetch(`/papers/${selectedPaper.id}/note`, {
+      method: "PUT",
+      body: JSON.stringify({ content: paperNoteInputEl.value || "" }),
+    });
+    setMessage("Paper note saved.", "success");
+  } catch (error) {
+    setMessage(error.message || "Could not save paper note.", "error");
   }
 });
 

@@ -50,6 +50,7 @@
             </label>
             <button type="submit">Search</button>
           </form>
+          <button id="batch-save-search-btn" type="button" class="secondary">Add checked search results to this collection</button>
           <div id="search-results" class="stack"></div>
         </article>
 
@@ -62,6 +63,11 @@
             <button id="btn-quiz" type="button" class="secondary">Generate Quiz</button>
             <button id="btn-recommend" type="button" class="secondary">Related Papers</button>
           </div>
+          <label>
+            Global note for selected paper
+            <textarea id="selected-paper-note" rows="4" placeholder="This note is shared across all collections for this paper."></textarea>
+          </label>
+          <button id="save-selected-paper-note" type="button" class="secondary">Save Paper Note</button>
           <pre id="ai-output" class="ai-output"></pre>
           <div id="related-papers" class="stack"></div>
         </article>

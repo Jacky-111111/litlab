@@ -117,6 +117,11 @@ button,
   padding: 0.6rem 0.9rem;
   font-weight: 600;
   cursor: pointer;
+  line-height: 1.2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
 }
 
 button:hover,
@@ -359,6 +364,29 @@ label {
   flex-wrap: wrap;
   gap: 0.55rem;
   margin-top: 0.8rem;
+}
+
+.checkbox-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 500;
+  margin: 0;
+}
+
+.checkbox-inline input {
+  width: auto;
+  margin: 0;
+}
+
+.paper-select-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.topbar .inline-actions {
+  margin-top: 0;
+  align-items: center;
 }
 
 .badge {

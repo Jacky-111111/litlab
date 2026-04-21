@@ -6,6 +6,8 @@ const createProjectFormEl = document.getElementById("create-project-form");
 const logoutButtonEl = document.getElementById("logout-btn");
 const emptyStateEl = document.getElementById("empty-state");
 const userEmailEl = document.getElementById("user-email");
+const librarySummaryEl = document.getElementById("library-summary");
+const libraryPreviewEl = document.getElementById("library-preview");
 
 function setMessage(text, tone = "info") {
   dashboardMessageEl.textContent = text;
@@ -29,6 +31,21 @@ function projectCardTemplate(project) {
   `;
 }
 
+function setLibrarySummary(text, tone = "info") {
+  librarySummaryEl.textContent = text;
+  librarySummaryEl.className = `message ${tone}`;
+}
+
+function paperPreviewCard(paper) {
+  const authors = (paper.authors || []).join(", ") || "Unknown author";
+  return `
+    <article class="mini-card">
+      <h4>${paper.title || "Untitled paper"}</h4>
+      <p class="muted">${authors}${paper.year ? ` · ${paper.year}` : ""}</p>
+    </article>
+  `;
+}
+
 async function loadProjects() {
   setMessage("Loading projects...");
   try {
@@ -39,6 +56,25 @@ async function loadProjects() {
     setMessage(projects.length ? "Projects loaded." : "No projects yet. Create your first one.", "success");
   } catch (error) {
     setMessage(error.message || "Could not load projects.", "error");
+  }
+}
+
+async function loadLibraryOverview() {
+  setLibrarySummary("Loading library overview...");
+  try {
+    const response = await window.LitLab.apiFetch("/papers?limit=5&offset=0");
+    const papers = response.papers || [];
+    if (!papers.length) {
+      libraryPreviewEl.innerHTML = "<p class='muted'>No papers yet. Add one from Read Papers.</p>";
+      setLibrarySummary("Your library is empty.", "warning");
+      return;
+    }
+
+    libraryPreviewEl.innerHTML = papers.slice(0, 3).map(paperPreviewCard).join("");
+    setLibrarySummary(`Latest ${Math.min(papers.length, 5)} papers loaded from your library.`, "success");
+  } catch (error) {
+    libraryPreviewEl.innerHTML = "<p class='muted'>Could not load library preview.</p>";
+    setLibrarySummary(error.message || "Could not load library overview.", "error");
   }
 }
 
@@ -125,3 +161,4 @@ async function loadWelcomeIdentity() {
 
 loadWelcomeIdentity();
 loadProjects();
+loadLibraryOverview();

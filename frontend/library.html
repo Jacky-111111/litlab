@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LitLab | Paper Library</title>
+    <link rel="icon" type="image/png" href="https://img.icons8.com/?size=100&id=aOIjONBdomrC&format=png&color=000000" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="config.js"></script>
+    <script defer src="app.js"></script>
+    <script defer src="library.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="container">
+        <a class="brand" href="dashboard.html">LitLab</a>
+        <a class="button secondary" href="dashboard.html">Back to Dashboard</a>
+      </div>
+    </header>
+
+    <main class="container section project-layout">
+      <section class="panel">
+        <h1>Paper Library</h1>
+        <p class="muted">Each paper is stored once. Add selected papers to multiple collections, keep notes, and reuse AI outputs.</p>
+        <p id="library-message" class="message info">Loading your papers...</p>
+      </section>
+
+      <section class="two-col">
+        <article class="panel">
+          <h2>Library Search</h2>
+          <form id="library-search-form">
+            <label>
+              Search title
+              <input name="query" type="text" placeholder="e.g., carbon accounting framework" />
+            </label>
+            <button type="submit">Search Library</button>
+          </form>
+          <div id="library-papers" class="stack"></div>
+        </article>
+
+        <article class="panel">
+          <h2>Collections</h2>
+          <p class="muted">Choose one or more collections and batch add selected papers.</p>
+          <div id="collection-checklist" class="stack"></div>
+          <button id="batch-add-btn" type="button">Add Selected Papers to Collections</button>
+        </article>
+      </section>
+
+      <section class="panel">
+        <h2>Paper Detail</h2>
+        <p id="detail-empty" class="muted">Select a paper card to view details.</p>
+        <div id="paper-detail" hidden>
+          <div id="paper-detail-meta" class="mini-card"></div>
+          <label>
+            Global Note
+            <textarea id="paper-note-input" rows="5" placeholder="Write your persistent note for this paper..."></textarea>
+          </label>
+          <div class="inline-actions">
+            <button id="save-note-btn" type="button">Save Note</button>
+            <button id="detail-summary-btn" type="button" class="secondary">Summary</button>
+            <button id="detail-explain-btn" type="button" class="secondary">Explain</button>
+            <button id="detail-quiz-btn" type="button" class="secondary">Quiz</button>
+            <button id="detail-recommend-btn" type="button" class="secondary">Related</button>
+          </div>
+          <pre id="detail-ai-output" class="ai-output"></pre>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

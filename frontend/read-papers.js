@@ -11,6 +11,7 @@ const analysisSectionsEl = document.getElementById("analysis-sections");
 const analysisOutputEl = document.getElementById("analysis-output");
 const relatedQueryEl = document.getElementById("related-query");
 const relatedPapersEl = document.getElementById("related-papers");
+const collectionsEl = document.getElementById("read-paper-collections");
 
 function setMessage(text, tone = "info") {
   messageEl.textContent = text;
@@ -155,6 +156,36 @@ function renderAnalysisResponse(payload) {
   relatedPapersEl.innerHTML = papers.map((paper) => paperCardTemplate(paper)).join("");
 }
 
+function selectedCollectionIds() {
+  const nodes = collectionsEl.querySelectorAll('input[data-role="collection-checkbox"]:checked');
+  return Array.from(nodes)
+    .map((node) => node.value)
+    .filter(Boolean);
+}
+
+async function loadCollections() {
+  try {
+    const response = await window.LitLab.apiFetch("/projects");
+    const projects = response.projects || [];
+    if (!projects.length) {
+      collectionsEl.innerHTML = "<p class='muted'>No collections yet. Create a project first.</p>";
+      return;
+    }
+    collectionsEl.innerHTML = projects
+      .map(
+        (project) => `
+          <label class="checkbox-inline mini-card">
+            <input type="checkbox" data-role="collection-checkbox" value="${project.id}" />
+            <span>${project.title}</span>
+          </label>
+        `
+      )
+      .join("");
+  } catch (error) {
+    collectionsEl.innerHTML = `<p class='message error'>${error.message || "Could not load collections."}</p>`;
+  }
+}
+
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -197,10 +228,14 @@ urlFormEl.addEventListener("submit", async (event) => {
   try {
     const payload = await window.LitLab.apiFetch("/ai/read-paper/url", {
       method: "POST",
-      body: JSON.stringify({ url }),
+      body: JSON.stringify({
+        url,
+        persist: true,
+        collection_ids: selectedCollectionIds(),
+      }),
     });
     renderAnalysisResponse(payload);
-    setMessage("URL analysis completed.", "success");
+    setMessage("URL analysis completed and saved to library.", "success");
   } catch (error) {
     analysisSectionsEl.innerHTML = "<p class='muted'>No analysis returned.</p>";
     analysisOutputEl.textContent = "";
@@ -228,10 +263,12 @@ pdfFormEl.addEventListener("submit", async (event) => {
       body: JSON.stringify({
         filename: file.name || "uploaded.pdf",
         pdf_base64: pdfBase64,
+        persist: true,
+        collection_ids: selectedCollectionIds(),
       }),
     });
     renderAnalysisResponse(payload);
-    setMessage("PDF analysis completed.", "success");
+    setMessage("PDF analysis completed and saved to library.", "success");
   } catch (error) {
     analysisSectionsEl.innerHTML = "<p class='muted'>No analysis returned.</p>";
     analysisOutputEl.textContent = "";
@@ -239,3 +276,5 @@ pdfFormEl.addEventListener("submit", async (event) => {
     setMessage(error.message || "Could not analyze PDF.", "error");
   }
 });
+
+loadCollections();

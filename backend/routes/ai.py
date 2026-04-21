@@ -1,8 +1,13 @@
 import base64
+import os
 import re
 from collections import Counter
+from datetime import datetime, timezone
+from hashlib import sha256
+from threading import Lock
+from time import time
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, HttpUrl
 
 try:
@@ -15,13 +20,38 @@ try:
     from ..services.openai_service import generate_text
     from ..services.paper_reader_service import extract_paper_from_pdf_bytes, extract_paper_from_url
     from ..services.paper_search_service import search_author_profiles, search_papers
+    from ..services.supabase_service import (
+        add_paper_to_collection,
+        count_daily_ai_writes,
+        create_or_update_paper_for_user,
+        get_current_user_id,
+        get_paper_ai_cache,
+        get_paper_for_user,
+        upsert_paper_ai_cache,
+        upload_pdf_for_user,
+    )
 except ImportError:
     from prompts.paper_prompts import explain_prompt, quiz_prompt, read_paper_analysis_prompt, summary_prompt
     from services.openai_service import generate_text
     from services.paper_reader_service import extract_paper_from_pdf_bytes, extract_paper_from_url
     from services.paper_search_service import search_author_profiles, search_papers
+    from services.supabase_service import (
+        add_paper_to_collection,
+        count_daily_ai_writes,
+        create_or_update_paper_for_user,
+        get_current_user_id,
+        get_paper_ai_cache,
+        get_paper_for_user,
+        upsert_paper_ai_cache,
+        upload_pdf_for_user,
+    )
 
 router = APIRouter(prefix="/ai", tags=["ai"])
+_rate_lock = Lock()
+_ai_timestamps: dict[str, list[float]] = {}
+_window_seconds = int(os.getenv("AI_RATE_LIMIT_WINDOW_SECONDS", "60"))
+_max_requests_per_window = int(os.getenv("AI_RATE_LIMIT_REQUESTS", "20"))
+_daily_cache_writes_quota = int(os.getenv("AI_DAILY_CACHE_WRITES", "120"))
 
 STOPWORDS = {
     "the",
@@ -59,15 +89,76 @@ class AIPaperRequest(BaseModel):
 
 class ReadPaperUrlRequest(BaseModel):
     url: HttpUrl
+    collection_ids: list[str] = Field(default_factory=list)
+    persist: bool = True
 
 
 class ReadPaperPdfRequest(BaseModel):
     filename: str = "uploaded.pdf"
     pdf_base64: str = Field(min_length=1)
+    collection_ids: list[str] = Field(default_factory=list)
+    persist: bool = True
+
+
+class AICacheResponse(BaseModel):
+    kind: str
+    paper_id: str
+
+
+def _enforce_ai_guardrails(user_id: str) -> None:
+    now = time()
+    with _rate_lock:
+        bucket = _ai_timestamps.setdefault(user_id, [])
+        min_ts = now - _window_seconds
+        while bucket and bucket[0] < min_ts:
+            bucket.pop(0)
+        if len(bucket) >= _max_requests_per_window:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Too many AI requests. Try again in {_window_seconds} seconds.",
+            )
+        bucket.append(now)
+
+    if count_daily_ai_writes(user_id) >= _daily_cache_writes_quota:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Daily AI quota reached. Please try again tomorrow.",
+        )
+
+
+def _paper_prompt_for_kind(kind: str, paper: PaperContext) -> str:
+    if kind == "summary":
+        return summary_prompt(
+            paper_title=paper.title,
+            paper_abstract=paper.abstract,
+            authors=paper.authors,
+            year=paper.year,
+        )
+    if kind == "explain":
+        return explain_prompt(
+            paper_title=paper.title,
+            paper_abstract=paper.abstract,
+            authors=paper.authors,
+            year=paper.year,
+        )
+    if kind == "quiz":
+        return quiz_prompt(
+            paper_title=paper.title,
+            paper_abstract=paper.abstract,
+            authors=paper.authors,
+            year=paper.year,
+        )
+    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unsupported AI kind: {kind}")
+
+
+def _prompt_hash(kind: str, paper: PaperContext) -> str:
+    key = f"{kind}|{paper.title}|{paper.abstract}|{'|'.join(paper.authors)}|{paper.year}"
+    return sha256(key.encode("utf-8")).hexdigest()
 
 
 @router.post("/summarize")
-def summarize(payload: AIPaperRequest) -> dict[str, str]:
+def summarize(payload: AIPaperRequest, user_id: str = Depends(get_current_user_id)) -> dict[str, str]:
+    _enforce_ai_guardrails(user_id)
     text = generate_text(
         summary_prompt(
             paper_title=payload.paper.title,
@@ -80,7 +171,8 @@ def summarize(payload: AIPaperRequest) -> dict[str, str]:
 
 
 @router.post("/explain")
-def explain(payload: AIPaperRequest) -> dict[str, str]:
+def explain(payload: AIPaperRequest, user_id: str = Depends(get_current_user_id)) -> dict[str, str]:
+    _enforce_ai_guardrails(user_id)
     text = generate_text(
         explain_prompt(
             paper_title=payload.paper.title,
@@ -93,7 +185,8 @@ def explain(payload: AIPaperRequest) -> dict[str, str]:
 
 
 @router.post("/quiz")
-def quiz(payload: AIPaperRequest) -> dict[str, str]:
+def quiz(payload: AIPaperRequest, user_id: str = Depends(get_current_user_id)) -> dict[str, str]:
+    _enforce_ai_guardrails(user_id)
     text = generate_text(
         quiz_prompt(
             paper_title=payload.paper.title,
@@ -198,7 +291,8 @@ def _enrich_author_profiles(paper: PaperContext) -> list[dict]:
 
 
 @router.post("/recommend")
-def recommend(payload: AIPaperRequest) -> dict:
+def recommend(payload: AIPaperRequest, user_id: str = Depends(get_current_user_id)) -> dict:
+    _enforce_ai_guardrails(user_id)
     if not f"{payload.paper.title} {payload.paper.abstract}".strip():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -241,14 +335,73 @@ def _build_read_paper_response(paper_data: dict) -> dict:
     return response_payload
 
 
+@router.post("/papers/{paper_id}/{kind}")
+def run_cached_paper_ai(
+    paper_id: str,
+    kind: str,
+    user_id: str = Depends(get_current_user_id),
+) -> dict:
+    _enforce_ai_guardrails(user_id)
+    allowed = {"summary", "explain", "quiz", "recommend"}
+    if kind not in allowed:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Kind must be one of: {sorted(allowed)}")
+
+    row = get_paper_for_user(paper_id, user_id)
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Paper not found.")
+    paper = PaperContext(**row)
+    p_hash = _prompt_hash(kind, paper)
+    cached = get_paper_ai_cache(paper_id=paper_id, user_id=user_id, kind=kind, prompt_hash=p_hash)
+    if cached:
+        return {"paper_id": paper_id, "kind": kind, "cached": True, **(cached.get("payload_json") or {})}
+
+    if kind == "recommend":
+        payload_json = _recommend_related_papers(paper)
+    else:
+        prompt = _paper_prompt_for_kind(kind, paper)
+        payload_json = {"output": generate_text(prompt)}
+
+    upsert_paper_ai_cache(
+        paper_id=paper_id,
+        user_id=user_id,
+        kind=kind,
+        prompt_hash=p_hash,
+        model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+        payload_json=payload_json,
+    )
+    return {"paper_id": paper_id, "kind": kind, "cached": False, **payload_json}
+
+
 @router.post("/read-paper/url")
-def read_paper_from_url(payload: ReadPaperUrlRequest) -> dict:
+def read_paper_from_url(payload: ReadPaperUrlRequest, user_id: str = Depends(get_current_user_id)) -> dict:
+    _enforce_ai_guardrails(user_id)
     paper_data = extract_paper_from_url(str(payload.url))
-    return _build_read_paper_response(paper_data)
+    response_payload = _build_read_paper_response(paper_data)
+    if payload.persist:
+        paper_record = create_or_update_paper_for_user(user_id, response_payload["paper"])
+        response_payload["paper"] = {**response_payload["paper"], "id": paper_record["id"]}
+        for collection_id in payload.collection_ids:
+            add_paper_to_collection(collection_id, paper_record["id"], user_id)
+        prompt_hash = _prompt_hash("analysis", PaperContext(**response_payload["paper"]))
+        upsert_paper_ai_cache(
+            paper_id=paper_record["id"],
+            user_id=user_id,
+            kind="analysis",
+            prompt_hash=prompt_hash,
+            model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+            payload_json={
+                "analysis": response_payload.get("analysis", ""),
+                "query": response_payload.get("query", ""),
+                "papers": response_payload.get("papers", []),
+                "author_profiles": response_payload.get("author_profiles", []),
+            },
+        )
+    return response_payload
 
 
 @router.post("/read-paper/pdf")
-def read_paper_from_pdf(payload: ReadPaperPdfRequest) -> dict:
+def read_paper_from_pdf(payload: ReadPaperPdfRequest, user_id: str = Depends(get_current_user_id)) -> dict:
+    _enforce_ai_guardrails(user_id)
     filename = payload.filename or "uploaded.pdf"
     if not filename.lower().endswith(".pdf"):
         raise HTTPException(
@@ -271,4 +424,33 @@ def read_paper_from_pdf(payload: ReadPaperPdfRequest) -> dict:
         )
 
     paper_data = extract_paper_from_pdf_bytes(pdf_bytes=pdf_bytes, filename=filename)
-    return _build_read_paper_response(paper_data)
+    if payload.persist:
+        content_hash = sha256(pdf_bytes).hexdigest()
+        paper_data["content_hash"] = content_hash
+        paper_data["pdf_storage_path"] = upload_pdf_for_user(
+            user_id=user_id,
+            filename=filename,
+            pdf_bytes=pdf_bytes,
+            content_hash=content_hash,
+        )
+    response_payload = _build_read_paper_response(paper_data)
+    if payload.persist:
+        paper_record = create_or_update_paper_for_user(user_id, response_payload["paper"])
+        response_payload["paper"] = {**response_payload["paper"], "id": paper_record["id"]}
+        for collection_id in payload.collection_ids:
+            add_paper_to_collection(collection_id, paper_record["id"], user_id)
+        prompt_hash = _prompt_hash("analysis", PaperContext(**response_payload["paper"]))
+        upsert_paper_ai_cache(
+            paper_id=paper_record["id"],
+            user_id=user_id,
+            kind="analysis",
+            prompt_hash=prompt_hash,
+            model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+            payload_json={
+                "analysis": response_payload.get("analysis", ""),
+                "query": response_payload.get("query", ""),
+                "papers": response_payload.get("papers", []),
+                "author_profiles": response_payload.get("author_profiles", []),
+            },
+        )
+    return response_payload
