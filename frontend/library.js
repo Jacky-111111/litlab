@@ -5,18 +5,7 @@ const searchFormEl = document.getElementById("library-search-form");
 const papersEl = document.getElementById("library-papers");
 const collectionsEl = document.getElementById("collection-checklist");
 const batchAddBtn = document.getElementById("batch-add-btn");
-const detailEmptyEl = document.getElementById("detail-empty");
-const detailEl = document.getElementById("paper-detail");
-const detailMetaEl = document.getElementById("paper-detail-meta");
-const noteInputEl = document.getElementById("paper-note-input");
-const saveNoteBtn = document.getElementById("save-note-btn");
-const aiOutputEl = document.getElementById("detail-ai-output");
-const summaryBtn = document.getElementById("detail-summary-btn");
-const explainBtn = document.getElementById("detail-explain-btn");
-const quizBtn = document.getElementById("detail-quiz-btn");
-const recommendBtn = document.getElementById("detail-recommend-btn");
 
-let selectedPaper = null;
 let latestPapers = [];
 
 function setMessage(text, tone = "info") {
@@ -25,9 +14,12 @@ function setMessage(text, tone = "info") {
 }
 
 function paperCard(paper) {
+  const nickname = (paper.nickname || paper.title || "Untitled").trim();
+  const title = (paper.title || "Untitled paper").trim();
   const authors = (paper.authors || []).join(", ") || "Unknown author";
   const abstract = paper.abstract || "No abstract available.";
   const snippet = abstract.length > 260 ? `${abstract.slice(0, 260)}...` : abstract;
+  const urlText = paper.url ? paper.url.replace(/^https?:\/\//, "") : "";
   return `
     <article class="card paper-card" data-paper-id="${paper.id}">
       <div class="paper-select-row">
@@ -36,11 +28,14 @@ function paperCard(paper) {
           Select
         </label>
       </div>
-      <h4>${paper.title || "Untitled paper"}</h4>
+      <h4>${nickname}</h4>
+      <p class="muted">Title: ${title}</p>
       <p class="muted">${authors}${paper.year ? ` · ${paper.year}` : ""} · ${paper.source || "Unknown source"}</p>
+      <p class="muted">${urlText || "No source URL saved"}</p>
       <p>${snippet}</p>
       <div class="paper-actions">
-        <button type="button" class="secondary" data-role="open-detail" data-paper-id="${paper.id}">Open Detail</button>
+        <button type="button" class="secondary" data-role="rename-paper" data-paper-id="${paper.id}">Rename</button>
+        <button type="button" class="secondary" data-role="open-detail" data-paper-id="${paper.id}">Read Paper</button>
         ${paper.url ? `<a class="secondary" href="${paper.url}" target="_blank" rel="noopener noreferrer">Open Source</a>` : ""}
       </div>
     </article>
@@ -104,32 +99,8 @@ async function loadPapers(query = "") {
   }
 }
 
-function renderPaperDetail(payload) {
-  const paper = payload.paper || {};
-  selectedPaper = paper;
-  detailEmptyEl.hidden = true;
-  detailEl.hidden = false;
-  const authors = (paper.authors || []).join(", ") || "Unknown author";
-  const collections = payload.collection_ids || [];
-  detailMetaEl.innerHTML = `
-    <strong>${paper.title || "Untitled paper"}</strong>
-    <p class="muted">${authors}${paper.year ? ` · ${paper.year}` : ""} · ${paper.source || "Unknown source"}</p>
-    <p class="muted">In ${collections.length} collection(s)</p>
-    ${paper.url ? `<p><a href="${paper.url}" target="_blank" rel="noopener noreferrer">Original URL</a></p>` : ""}
-  `;
-  noteInputEl.value = payload.note?.content || "";
-  aiOutputEl.textContent = "";
-}
-
 async function openPaperDetail(paperId) {
-  setMessage("Loading paper detail...");
-  try {
-    const payload = await window.LitLab.apiFetch(`/papers/${paperId}`);
-    renderPaperDetail(payload);
-    setMessage("Paper detail loaded.", "success");
-  } catch (error) {
-    setMessage(error.message || "Could not load paper detail.", "error");
-  }
+  window.location.href = `read-papers.html?paper_id=${encodeURIComponent(paperId)}`;
 }
 
 searchFormEl.addEventListener("submit", async (event) => {
@@ -142,11 +113,33 @@ searchFormEl.addEventListener("submit", async (event) => {
 papersEl.addEventListener("click", async (event) => {
   const target = event.target;
   if (!(target instanceof HTMLElement)) return;
+
+  const renameButton = target.closest("button[data-role='rename-paper']");
+  if (renameButton instanceof HTMLButtonElement) {
+    const paperId = renameButton.dataset.paperId;
+    if (!paperId) return;
+    const paper = latestPapers.find((item) => item.id === paperId);
+    const currentName = paper?.nickname || paper?.title || "Untitled";
+    const nextName = window.prompt("Set a nickname for this paper:", currentName);
+    if (nextName === null) return;
+    try {
+      await window.LitLab.apiFetch(`/papers/${paperId}/nickname`, {
+        method: "PUT",
+        body: JSON.stringify({ nickname: nextName }),
+      });
+      setMessage("Paper nickname updated.", "success");
+      await loadPapers(String(new FormData(searchFormEl).get("query") || "").trim());
+    } catch (error) {
+      setMessage(error.message || "Could not update paper nickname.", "error");
+    }
+    return;
+  }
+
   const button = target.closest("button[data-role='open-detail']");
   if (!(button instanceof HTMLButtonElement)) return;
   const paperId = button.dataset.paperId;
   if (!paperId) return;
-  await openPaperDetail(paperId);
+  openPaperDetail(paperId);
 });
 
 batchAddBtn.addEventListener("click", async () => {
@@ -176,52 +169,6 @@ batchAddBtn.addEventListener("click", async () => {
     setMessage(error.message || "Could not batch add papers.", "error");
   }
 });
-
-saveNoteBtn.addEventListener("click", async () => {
-  if (!selectedPaper?.id) {
-    setMessage("Select a paper first.", "warning");
-    return;
-  }
-  try {
-    await window.LitLab.apiFetch(`/papers/${selectedPaper.id}/note`, {
-      method: "PUT",
-      body: JSON.stringify({ content: noteInputEl.value || "" }),
-    });
-    setMessage("Note saved.", "success");
-  } catch (error) {
-    setMessage(error.message || "Could not save note.", "error");
-  }
-});
-
-async function runDetailAi(kind) {
-  if (!selectedPaper?.id) {
-    setMessage("Select a paper first.", "warning");
-    return;
-  }
-  aiOutputEl.textContent = "Generating...";
-  try {
-    const payload = await window.LitLab.apiFetch(`/ai/papers/${selectedPaper.id}/${kind}`, {
-      method: "POST",
-    });
-    if (kind === "recommend") {
-      const papers = payload.papers || [];
-      aiOutputEl.textContent = papers.length
-        ? `Query: ${payload.query || ""}\n\n${papers.map((paper) => `- ${paper.title}`).join("\n")}`
-        : "No related papers found.";
-    } else {
-      aiOutputEl.textContent = payload.output || "No output returned.";
-    }
-    setMessage(payload.cached ? "Loaded from cache." : "AI result generated.", "success");
-  } catch (error) {
-    aiOutputEl.textContent = "";
-    setMessage(error.message || "AI action failed.", "error");
-  }
-}
-
-summaryBtn.addEventListener("click", () => runDetailAi("summary"));
-explainBtn.addEventListener("click", () => runDetailAi("explain"));
-quizBtn.addEventListener("click", () => runDetailAi("quiz"));
-recommendBtn.addEventListener("click", () => runDetailAi("recommend"));
 
 loadCollections();
 loadPapers();

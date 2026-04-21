@@ -1,17 +1,33 @@
 window.LitLab.requireAuth();
 
-const urlFormEl = document.getElementById("url-form");
-const pdfFormEl = document.getElementById("pdf-form");
+const paperUrlInputEl = document.getElementById("paper-url-input");
+const savePaperUrlBtn = document.getElementById("save-paper-url-btn");
 const pdfInputEl = document.getElementById("paper-pdf-input");
 const choosePdfBtn = document.getElementById("choose-pdf-btn");
 const selectedPdfNameEl = document.getElementById("selected-pdf-name");
+const analyzePaperBtn = document.getElementById("analyze-paper-btn");
+const savedSourceInfoEl = document.getElementById("saved-source-info");
 const messageEl = document.getElementById("read-papers-message");
 const paperMetaEl = document.getElementById("paper-meta");
 const analysisSectionsEl = document.getElementById("analysis-sections");
 const analysisOutputEl = document.getElementById("analysis-output");
 const relatedQueryEl = document.getElementById("related-query");
 const relatedPapersEl = document.getElementById("related-papers");
+const citationSectionEl = document.getElementById("citation-section");
+const citationMlaEl = document.getElementById("citation-mla");
+const citationApaEl = document.getElementById("citation-apa");
+const citationChicagoEl = document.getElementById("citation-chicago");
 const collectionsEl = document.getElementById("read-paper-collections");
+const persistToggleEl = document.getElementById("persist-to-library");
+const readerModeHintEl = document.getElementById("reader-mode-hint");
+const backToLibraryBtn = document.getElementById("back-to-library-btn");
+const nicknameEditorEl = document.getElementById("nickname-editor");
+const paperNicknameInputEl = document.getElementById("paper-nickname-input");
+const savePaperNicknameBtn = document.getElementById("save-paper-nickname-btn");
+const pageParams = new URLSearchParams(window.location.search);
+const presetPaperId = String(pageParams.get("paper_id") || "").trim();
+let currentPaperId = "";
+let currentPaperData = null;
 
 function setMessage(text, tone = "info") {
   messageEl.textContent = text;
@@ -37,15 +53,51 @@ function paperCardTemplate(paper) {
 }
 
 function renderPaperMeta(paper) {
+  const nickname = (paper.nickname || paper.title || "Untitled").trim();
+  currentPaperId = String(paper.id || "").trim();
+  currentPaperData = paper || null;
+  if (paper?.url) {
+    paperUrlInputEl.value = String(paper.url);
+  }
+  nicknameEditorEl.hidden = !currentPaperId;
+  if (currentPaperId) {
+    paperNicknameInputEl.value = nickname;
+  }
   const authors = (paper.authors || []).join(", ") || "Unknown";
   paperMetaEl.classList.remove("muted");
   paperMetaEl.innerHTML = `
-    <strong>${paper.title || "Untitled paper"}</strong>
+    <strong>${nickname}</strong>
+    <p>Detected title: ${paper.title || "Untitled paper"}</p>
     <p>Authors: ${authors}</p>
     <p>Year: ${paper.year || "Unknown"}</p>
     <p>Source: ${paper.source || "Unknown"}</p>
+    ${paper.pdf_storage_path ? `<p>PDF saved: ${paper.pdf_storage_path}</p>` : ""}
     ${paper.url ? `<p><a href="${paper.url}" target="_blank" rel="noopener noreferrer">Original URL</a></p>` : ""}
   `;
+  renderSavedSourceInfo(paper);
+}
+
+function renderSavedSourceInfo(paper) {
+  const url = String(paper?.url || "").trim();
+  const pdfPath = String(paper?.pdf_storage_path || "").trim();
+  const lines = [];
+  lines.push(`<p><strong>Saved URL:</strong> ${url || "Not saved"}</p>`);
+  lines.push(`<p><strong>Saved PDF:</strong> ${pdfPath || "Not saved"}</p>`);
+  lines.push(
+    `<div class="inline-actions">
+      <button type="button" class="secondary" data-source-action="copy-url" ${url ? "" : "disabled"}>Copy URL</button>
+      <button type="button" class="secondary" data-source-action="download-pdf" ${pdfPath && currentPaperId ? "" : "disabled"}>Download PDF</button>
+    </div>`
+  );
+  savedSourceInfoEl.classList.remove("muted");
+  savedSourceInfoEl.innerHTML = lines.join("");
+}
+
+function renderCitations(paper) {
+  const citations = paper?.citations || {};
+  citationMlaEl.textContent = citations.mla || paper?.citation_mla || "Citation unavailable.";
+  citationApaEl.textContent = citations.apa || paper?.citation_apa || "Citation unavailable.";
+  citationChicagoEl.textContent = citations.chicago || paper?.citation_chicago || "Citation unavailable.";
 }
 
 function cleanInlineMarkdown(text) {
@@ -139,6 +191,7 @@ function renderStructuredAnalysis(markdown) {
 
 function renderAnalysisResponse(payload) {
   renderPaperMeta(payload.paper || {});
+  renderCitations(payload.paper || {});
   const analysisText = payload.analysis || "No analysis returned.";
   renderStructuredAnalysis(analysisText);
   analysisOutputEl.textContent = analysisText;
@@ -157,10 +210,18 @@ function renderAnalysisResponse(payload) {
 }
 
 function selectedCollectionIds() {
+  if (!persistToggleEl.checked) return [];
   const nodes = collectionsEl.querySelectorAll('input[data-role="collection-checkbox"]:checked');
   return Array.from(nodes)
     .map((node) => node.value)
     .filter(Boolean);
+}
+
+function setCollectionSelectionEnabled(enabled) {
+  const checkboxes = collectionsEl.querySelectorAll('input[data-role="collection-checkbox"]');
+  checkboxes.forEach((checkbox) => {
+    checkbox.disabled = !enabled;
+  });
 }
 
 async function loadCollections() {
@@ -181,8 +242,35 @@ async function loadCollections() {
         `
       )
       .join("");
+    setCollectionSelectionEnabled(persistToggleEl.checked);
   } catch (error) {
     collectionsEl.innerHTML = `<p class='message error'>${error.message || "Could not load collections."}</p>`;
+  }
+}
+
+async function readExistingPaper(paperId) {
+  setMessage("Loading paper from your library...");
+  analysisSectionsEl.innerHTML = "<p class='muted'>Loading...</p>";
+  analysisOutputEl.textContent = "";
+  relatedPapersEl.innerHTML = "";
+  try {
+    const paperPayload = await window.LitLab.apiFetch(`/papers/${paperId}`);
+    if (paperPayload?.paper?.url) {
+      paperUrlInputEl.value = paperPayload.paper.url;
+    }
+    renderPaperMeta(paperPayload.paper || {});
+    renderCitations(paperPayload.paper || {});
+    const analysisPayload = await window.LitLab.apiFetch(`/ai/papers/${paperId}/analysis`, {
+      method: "POST",
+    });
+    if (!analysisPayload.paper) {
+      analysisPayload.paper = paperPayload.paper || {};
+    }
+    renderAnalysisResponse(analysisPayload);
+    setMessage(analysisPayload.cached ? "Library paper loaded from cache." : "Library paper analyzed.", "success");
+  } catch (error) {
+    analysisSectionsEl.innerHTML = "<p class='muted'>No analysis returned.</p>";
+    setMessage(error.message || "Could not load this library paper.", "error");
   }
 }
 
@@ -212,69 +300,196 @@ pdfInputEl.addEventListener("change", () => {
   selectedPdfNameEl.textContent = file ? file.name : "No file chosen";
 });
 
-urlFormEl.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const formData = new FormData(urlFormEl);
-  const url = String(formData.get("paper_url") || "").trim();
-  if (!url) {
-    setMessage("Please provide a paper URL.", "warning");
-    return;
-  }
-
-  setMessage("Analyzing paper URL...");
-  analysisSectionsEl.innerHTML = "<p class='muted'>Analyzing...</p>";
-  analysisOutputEl.textContent = "";
-  relatedPapersEl.innerHTML = "";
-  try {
-    const payload = await window.LitLab.apiFetch("/ai/read-paper/url", {
-      method: "POST",
-      body: JSON.stringify({
-        url,
-        persist: true,
-        collection_ids: selectedCollectionIds(),
-      }),
-    });
-    renderAnalysisResponse(payload);
-    setMessage("URL analysis completed and saved to library.", "success");
-  } catch (error) {
-    analysisSectionsEl.innerHTML = "<p class='muted'>No analysis returned.</p>";
-    analysisOutputEl.textContent = "";
-    relatedPapersEl.innerHTML = "";
-    setMessage(error.message || "Could not analyze URL.", "error");
-  }
-});
-
-pdfFormEl.addEventListener("submit", async (event) => {
-  event.preventDefault();
+async function analyzeFromCurrentSource() {
+  const url = String(paperUrlInputEl.value || "").trim();
   const file = pdfInputEl.files && pdfInputEl.files.length ? pdfInputEl.files[0] : null;
-  if (!(file instanceof File)) {
-    setMessage("Please choose a PDF file.", "warning");
+  if (!(file instanceof File) && !url) {
+    if (currentPaperId) {
+      await readExistingPaper(currentPaperId);
+      return;
+    }
+    setMessage("Provide URL or choose PDF before analyzing.", "warning");
     return;
   }
 
-  setMessage("Uploading PDF and generating analysis...");
-  analysisSectionsEl.innerHTML = "<p class='muted'>Analyzing PDF...</p>";
+  analysisSectionsEl.innerHTML = "<p class='muted'>Analyzing source...</p>";
   analysisOutputEl.textContent = "";
   relatedPapersEl.innerHTML = "";
   try {
-    const pdfBase64 = await fileToBase64(file);
-    const payload = await window.LitLab.apiFetch("/ai/read-paper/pdf", {
-      method: "POST",
-      body: JSON.stringify({
-        filename: file.name || "uploaded.pdf",
-        pdf_base64: pdfBase64,
-        persist: true,
-        collection_ids: selectedCollectionIds(),
-      }),
-    });
+    let payload = null;
+    if (file instanceof File) {
+      setMessage("Uploading PDF and analyzing...");
+      const pdfBase64 = await fileToBase64(file);
+      payload = await window.LitLab.apiFetch("/ai/read-paper/pdf", {
+        method: "POST",
+        body: JSON.stringify({
+          filename: file.name || "uploaded.pdf",
+          pdf_base64: pdfBase64,
+          persist: persistToggleEl.checked,
+          collection_ids: selectedCollectionIds(),
+        }),
+      });
+    } else {
+      setMessage("Analyzing URL...");
+      payload = await window.LitLab.apiFetch("/ai/read-paper/url", {
+        method: "POST",
+        body: JSON.stringify({
+          url,
+          persist: persistToggleEl.checked,
+          collection_ids: selectedCollectionIds(),
+        }),
+      });
+    }
     renderAnalysisResponse(payload);
-    setMessage("PDF analysis completed and saved to library.", "success");
+    setMessage(
+      persistToggleEl.checked ? "Analysis completed and saved to library." : "Analysis completed (not saved).",
+      "success"
+    );
+    if (file instanceof File) {
+      pdfInputEl.value = "";
+      selectedPdfNameEl.textContent = "No file chosen";
+    }
   } catch (error) {
     analysisSectionsEl.innerHTML = "<p class='muted'>No analysis returned.</p>";
     analysisOutputEl.textContent = "";
     relatedPapersEl.innerHTML = "";
-    setMessage(error.message || "Could not analyze PDF.", "error");
+    setMessage(error.message || "Could not analyze source.", "error");
+  }
+}
+
+analyzePaperBtn.addEventListener("click", async () => {
+  await analyzeFromCurrentSource();
+});
+
+persistToggleEl.addEventListener("change", () => {
+  setCollectionSelectionEnabled(persistToggleEl.checked);
+});
+
+savePaperNicknameBtn.addEventListener("click", async () => {
+  await saveNicknameFromEditor();
+});
+
+savePaperUrlBtn.addEventListener("click", async () => {
+  if (!currentPaperId) {
+    setMessage("Please analyze and save this paper first, then you can save URL directly.", "warning");
+    return;
+  }
+  const url = String(paperUrlInputEl.value || "").trim();
+  if (!url) {
+    setMessage("Please enter a valid URL first.", "warning");
+    return;
+  }
+  try {
+    const response = await window.LitLab.apiFetch(`/papers/${currentPaperId}/url`, {
+      method: "PUT",
+      body: JSON.stringify({ url }),
+    });
+    const updatedPaper = response.paper || {};
+    renderPaperMeta({ ...updatedPaper, authors: updatedPaper.authors || [] });
+    renderCitations(updatedPaper);
+    setMessage("Paper URL saved and synced.", "success");
+  } catch (error) {
+    setMessage(error.message || "Could not save URL.", "error");
   }
 });
+
+paperNicknameInputEl.addEventListener("keydown", async (event) => {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  await saveNicknameFromEditor();
+});
+
+async function saveNicknameFromEditor() {
+  if (!currentPaperId) {
+    setMessage("This paper is not saved yet. Enable save and analyze first.", "warning");
+    return;
+  }
+  const nickname = String(paperNicknameInputEl.value || "").trim();
+  if (!nickname) {
+    setMessage("Nickname cannot be empty.", "warning");
+    return;
+  }
+  try {
+    const response = await window.LitLab.apiFetch(`/papers/${currentPaperId}/nickname`, {
+      method: "PUT",
+      body: JSON.stringify({ nickname }),
+    });
+    const updatedPaper = response.paper || {};
+    renderPaperMeta({
+      ...updatedPaper,
+      authors: updatedPaper.authors || [],
+    });
+    setMessage("昵称已同步到 Library。", "success");
+  } catch (error) {
+    setMessage(error.message || "Could not update nickname.", "error");
+  }
+}
+
+citationSectionEl.addEventListener("click", async (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLButtonElement)) return;
+  const elementId = target.dataset.copyTarget;
+  if (!elementId) return;
+  const sourceEl = document.getElementById(elementId);
+  if (!(sourceEl instanceof HTMLElement)) return;
+  const value = sourceEl.textContent || "";
+  if (!value.trim()) {
+    setMessage("No citation text to copy yet.", "warning");
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(value);
+    setMessage("Citation copied.", "success");
+  } catch (_error) {
+    setMessage("Could not copy citation. Please copy manually.", "warning");
+  }
+});
+
+savedSourceInfoEl.addEventListener("click", async (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLButtonElement)) return;
+  const action = target.dataset.sourceAction;
+  if (!action) return;
+
+  if (action === "copy-url") {
+    const url = String(currentPaperData?.url || "").trim();
+    if (!url) {
+      setMessage("No saved URL available.", "warning");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setMessage("Saved URL copied.", "success");
+    } catch (_error) {
+      setMessage("Could not copy URL. Please copy manually.", "warning");
+    }
+    return;
+  }
+
+  if (action === "download-pdf") {
+    if (!currentPaperId) {
+      setMessage("No saved paper selected.", "warning");
+      return;
+    }
+    try {
+      const payload = await window.LitLab.apiFetch(`/papers/${currentPaperId}/pdf-download-url`);
+      const downloadUrl = payload.download_url || "";
+      if (!downloadUrl) {
+        setMessage("Could not get PDF download URL.", "error");
+        return;
+      }
+      window.open(downloadUrl, "_blank", "noopener,noreferrer");
+      setMessage("PDF download started.", "success");
+    } catch (error) {
+      setMessage(error.message || "Could not download saved PDF.", "error");
+    }
+  }
+});
+
+if (presetPaperId) {
+  readerModeHintEl.textContent = "Reader mode: opening a paper from your library.";
+  backToLibraryBtn.hidden = false;
+  readExistingPaper(presetPaperId);
+}
 
 loadCollections();

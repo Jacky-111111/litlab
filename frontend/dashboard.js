@@ -37,10 +37,13 @@ function setLibrarySummary(text, tone = "info") {
 }
 
 function paperPreviewCard(paper) {
+  const nickname = (paper.nickname || paper.title || "Untitled").trim();
+  const title = (paper.title || "Untitled paper").trim();
   const authors = (paper.authors || []).join(", ") || "Unknown author";
   return `
     <article class="mini-card">
-      <h4>${paper.title || "Untitled paper"}</h4>
+      <h4>${nickname}</h4>
+      <p class="muted">Title: ${title}</p>
       <p class="muted">${authors}${paper.year ? ` · ${paper.year}` : ""}</p>
     </article>
   `;

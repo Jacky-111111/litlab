@@ -181,18 +181,88 @@ def _normalize_authors(authors: Any) -> list[str]:
     return cleaned[:12]
 
 
+def _extract_last_name(author: str) -> str:
+    cleaned = str(author or "").strip()
+    if not cleaned:
+        return "Unknown"
+    parts = cleaned.split()
+    return parts[-1] if parts else "Unknown"
+
+
+def _format_apa_name(author: str) -> str:
+    cleaned = str(author or "").strip()
+    if not cleaned:
+        return "Unknown"
+    parts = cleaned.split()
+    if not parts:
+        return "Unknown"
+    last = parts[-1]
+    initials = " ".join([f"{part[0]}." for part in parts[:-1] if part])
+    return f"{last}, {initials}".strip().rstrip(",")
+
+
+def _build_citation_strings(title: str, authors: list[str], year: int | None, url: str) -> dict[str, str]:
+    safe_title = (title or "Untitled paper").strip() or "Untitled paper"
+    safe_year = str(year) if year else "n.d."
+    safe_url = (url or "").strip()
+    safe_authors = authors or []
+
+    if safe_authors:
+        mla_author = (
+            f"{_extract_last_name(safe_authors[0])}, {safe_authors[0].rsplit(' ', 1)[0]}".strip(", ")
+            if len(safe_authors) == 1
+            else f"{_extract_last_name(safe_authors[0])}, {safe_authors[0].rsplit(' ', 1)[0]}, et al."
+        )
+        apa_author = _format_apa_name(safe_authors[0]) if len(safe_authors) == 1 else f"{_format_apa_name(safe_authors[0])}, et al."
+        chicago_author = ", ".join(safe_authors[:2]) + (" et al." if len(safe_authors) > 2 else "")
+    else:
+        mla_author = "Unknown"
+        apa_author = "Unknown"
+        chicago_author = "Unknown"
+
+    mla = f'{mla_author}. "{safe_title}." {safe_year}.'
+    apa = f"{apa_author} ({safe_year}). {safe_title}."
+    chicago = f"{chicago_author}. {safe_year}. \"{safe_title}.\""
+
+    if safe_url:
+        mla = f"{mla} {safe_url}"
+        apa = f"{apa} {safe_url}"
+        chicago = f"{chicago} {safe_url}"
+
+    return {"mla": mla.strip(), "apa": apa.strip(), "chicago": chicago.strip()}
+
+
 def _paper_row_to_response(row: dict[str, Any]) -> dict[str, Any]:
+    title = row.get("title") or "Untitled paper"
+    nickname = str(row.get("nickname") or "").strip() or title or "Untitled"
+    citations = {
+        "mla": str(row.get("citation_mla") or "").strip(),
+        "apa": str(row.get("citation_apa") or "").strip(),
+        "chicago": str(row.get("citation_chicago") or "").strip(),
+    }
+    if not all(citations.values()):
+        citations = _build_citation_strings(
+            title=title,
+            authors=_normalize_authors(row.get("authors_json") or row.get("authors") or []),
+            year=row.get("year"),
+            url=row.get("canonical_url") or row.get("url") or "",
+        )
     return {
         "id": row.get("id", ""),
         "external_paper_id": row.get("external_paper_id") or "",
         "source": row.get("source") or "Unknown",
-        "title": row.get("title") or "Untitled paper",
+        "title": title,
+        "nickname": nickname,
         "authors": _normalize_authors(row.get("authors_json") or row.get("authors") or []),
         "year": row.get("year"),
         "abstract": row.get("abstract") or "",
         "url": row.get("canonical_url") or row.get("url") or "",
         "pdf_storage_path": row.get("pdf_storage_path") or "",
         "content_hash": row.get("content_hash") or "",
+        "citation_mla": citations["mla"],
+        "citation_apa": citations["apa"],
+        "citation_chicago": citations["chicago"],
+        "citations": citations,
         "created_at": row.get("created_at"),
         "updated_at": row.get("updated_at"),
     }
@@ -257,7 +327,15 @@ def create_or_update_paper_for_user(user_id: str, payload: dict[str, Any]) -> di
     canonical_url = str(payload.get("url") or payload.get("canonical_url") or "").strip()
     content_hash = str(payload.get("content_hash") or "").strip()
     title = str(payload.get("title") or "").strip() or "Untitled paper"
+    nickname = str(payload.get("nickname") or "").strip() or title or "Untitled"
     abstract = str(payload.get("abstract") or "").strip()
+    normalized_authors = _normalize_authors(payload.get("authors"))
+    citations = _build_citation_strings(
+        title=title,
+        authors=normalized_authors,
+        year=payload.get("year"),
+        url=canonical_url,
+    )
     existing = _find_existing_paper(
         user_id=user_id,
         source=source,
@@ -271,12 +349,16 @@ def create_or_update_paper_for_user(user_id: str, payload: dict[str, Any]) -> di
         "source": source,
         "external_paper_id": external_paper_id or None,
         "title": title,
-        "authors_json": _normalize_authors(payload.get("authors")),
+        "nickname": nickname,
+        "authors_json": normalized_authors,
         "year": payload.get("year"),
         "abstract": abstract,
         "canonical_url": canonical_url,
         "pdf_storage_path": str(payload.get("pdf_storage_path") or "").strip() or None,
         "content_hash": content_hash or None,
+        "citation_mla": str(payload.get("citation_mla") or citations["mla"]).strip(),
+        "citation_apa": str(payload.get("citation_apa") or citations["apa"]).strip(),
+        "citation_chicago": str(payload.get("citation_chicago") or citations["chicago"]).strip(),
         "updated_at": now_iso,
     }
 
@@ -284,6 +366,11 @@ def create_or_update_paper_for_user(user_id: str, payload: dict[str, Any]) -> di
         update_payload: dict[str, Any] = {"updated_at": now_iso}
         if base_payload["title"] and (not existing.get("title") or existing.get("title") == "Untitled paper"):
             update_payload["title"] = base_payload["title"]
+        if base_payload["nickname"] and (
+            not str(existing.get("nickname") or "").strip()
+            or str(existing.get("nickname") or "").strip() == str(existing.get("title") or "").strip()
+        ):
+            update_payload["nickname"] = base_payload["nickname"]
         if base_payload["abstract"] and len(base_payload["abstract"]) > len(str(existing.get("abstract") or "")):
             update_payload["abstract"] = base_payload["abstract"]
         if base_payload["authors_json"] and not existing.get("authors_json"):
@@ -296,6 +383,12 @@ def create_or_update_paper_for_user(user_id: str, payload: dict[str, Any]) -> di
             update_payload["pdf_storage_path"] = base_payload["pdf_storage_path"]
         if base_payload["content_hash"] and not existing.get("content_hash"):
             update_payload["content_hash"] = base_payload["content_hash"]
+        if base_payload["citation_mla"]:
+            update_payload["citation_mla"] = base_payload["citation_mla"]
+        if base_payload["citation_apa"]:
+            update_payload["citation_apa"] = base_payload["citation_apa"]
+        if base_payload["citation_chicago"]:
+            update_payload["citation_chicago"] = base_payload["citation_chicago"]
 
         response = client.table("papers").update(update_payload).eq("id", existing["id"]).eq("user_id", user_id).execute()
         rows = response.data or []
@@ -319,7 +412,7 @@ def list_papers_for_user(user_id: str, query: str = "", limit: int = 20, offset:
     request = client.table("papers").select("*").eq("user_id", user_id).order("updated_at", desc=True)
     if query.strip():
         like_value = f"%{query.strip()}%"
-        request = request.ilike("title", like_value)
+        request = request.or_(f"title.ilike.{like_value},nickname.ilike.{like_value}")
     response = request.range(safe_offset, safe_offset + safe_limit - 1).execute()
     return [_paper_row_to_response(row) for row in (response.data or [])]
 
@@ -327,6 +420,60 @@ def list_papers_for_user(user_id: str, query: str = "", limit: int = 20, offset:
 def get_paper_for_user(paper_id: str, user_id: str) -> dict[str, Any] | None:
     client = _require_supabase()
     response = client.table("papers").select("*").eq("id", paper_id).eq("user_id", user_id).limit(1).execute()
+    rows = response.data or []
+    if not rows:
+        return None
+    return _paper_row_to_response(rows[0])
+
+
+def update_paper_nickname_for_user(paper_id: str, user_id: str, nickname: str) -> dict[str, Any] | None:
+    client = _require_supabase()
+    clean_nickname = nickname.strip()
+    if not clean_nickname:
+        row = get_paper_for_user(paper_id, user_id)
+        if not row:
+            return None
+        clean_nickname = row.get("title") or "Untitled"
+    response = (
+        client.table("papers")
+        .update({"nickname": clean_nickname, "updated_at": _now_iso()})
+        .eq("id", paper_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
+    rows = response.data or []
+    if not rows:
+        return None
+    return _paper_row_to_response(rows[0])
+
+
+def update_paper_url_for_user(paper_id: str, user_id: str, url: str) -> dict[str, Any] | None:
+    existing = get_paper_for_user(paper_id, user_id)
+    if not existing:
+        return None
+    clean_url = url.strip()
+    citations = _build_citation_strings(
+        title=str(existing.get("title") or "Untitled paper"),
+        authors=_normalize_authors(existing.get("authors") or []),
+        year=existing.get("year"),
+        url=clean_url,
+    )
+    client = _require_supabase()
+    response = (
+        client.table("papers")
+        .update(
+            {
+                "canonical_url": clean_url,
+                "citation_mla": citations["mla"],
+                "citation_apa": citations["apa"],
+                "citation_chicago": citations["chicago"],
+                "updated_at": _now_iso(),
+            }
+        )
+        .eq("id", paper_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
     rows = response.data or []
     if not rows:
         return None
@@ -510,6 +657,35 @@ def upload_pdf_for_user(user_id: str, filename: str, pdf_bytes: bytes, content_h
         # If upload fails because object already exists, we still reuse the path.
         pass
     return object_path
+
+
+def download_pdf_from_storage(object_path: str) -> bytes | None:
+    if not object_path:
+        return None
+    client = _require_supabase()
+    bucket = os.getenv("SUPABASE_PDF_BUCKET", "paper-pdfs")
+    try:
+        data = client.storage.from_(bucket).download(object_path)
+    except Exception:  # noqa: BLE001
+        return None
+    return data if isinstance(data, bytes) and data else None
+
+
+def create_signed_pdf_url(object_path: str, expires_in_seconds: int = 3600) -> str | None:
+    if not object_path:
+        return None
+    client = _require_supabase()
+    bucket = os.getenv("SUPABASE_PDF_BUCKET", "paper-pdfs")
+    try:
+        response = client.storage.from_(bucket).create_signed_url(path=object_path, expires_in=expires_in_seconds)
+    except Exception:  # noqa: BLE001
+        return None
+
+    if isinstance(response, str):
+        return response
+    if isinstance(response, dict):
+        return response.get("signedURL") or response.get("signedUrl") or response.get("signed_url")
+    return None
 
 
 def get_user_profile(user_id: str) -> dict[str, Any] | None:

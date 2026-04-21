@@ -24,6 +24,7 @@ try:
         add_paper_to_collection,
         count_daily_ai_writes,
         create_or_update_paper_for_user,
+        download_pdf_from_storage,
         get_current_user_id,
         get_paper_ai_cache,
         get_paper_for_user,
@@ -39,6 +40,7 @@ except ImportError:
         add_paper_to_collection,
         count_daily_ai_writes,
         create_or_update_paper_for_user,
+        download_pdf_from_storage,
         get_current_user_id,
         get_paper_ai_cache,
         get_paper_for_user,
@@ -77,10 +79,17 @@ class PaperContext(BaseModel):
     external_paper_id: str | None = None
     source: str | None = None
     title: str = Field(min_length=1)
+    nickname: str = ""
     authors: list[str] = Field(default_factory=list)
     year: int | None = None
     abstract: str = ""
     url: str = ""
+    pdf_storage_path: str = ""
+    content_hash: str = ""
+    citation_mla: str = ""
+    citation_apa: str = ""
+    citation_chicago: str = ""
+    citations: dict = Field(default_factory=dict)
 
 
 class AIPaperRequest(BaseModel):
@@ -303,6 +312,8 @@ def recommend(payload: AIPaperRequest, user_id: str = Depends(get_current_user_i
 
 def _build_read_paper_response(paper_data: dict) -> dict:
     paper = _enrich_paper_authors(PaperContext(**paper_data))
+    if not paper.nickname.strip():
+        paper.nickname = paper.title or "Untitled"
     author_profiles = _enrich_author_profiles(paper)
     author_background = _build_author_background_text(author_profiles)
     analysis = generate_text(
@@ -342,7 +353,7 @@ def run_cached_paper_ai(
     user_id: str = Depends(get_current_user_id),
 ) -> dict:
     _enforce_ai_guardrails(user_id)
-    allowed = {"summary", "explain", "quiz", "recommend"}
+    allowed = {"summary", "explain", "quiz", "recommend", "analysis"}
     if kind not in allowed:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Kind must be one of: {sorted(allowed)}")
 
@@ -353,9 +364,41 @@ def run_cached_paper_ai(
     p_hash = _prompt_hash(kind, paper)
     cached = get_paper_ai_cache(paper_id=paper_id, user_id=user_id, kind=kind, prompt_hash=p_hash)
     if cached:
-        return {"paper_id": paper_id, "kind": kind, "cached": True, **(cached.get("payload_json") or {})}
+        payload = cached.get("payload_json") or {}
+        payload_paper = payload.get("paper") or {}
+        return {
+            "paper_id": paper_id,
+            "kind": kind,
+            "cached": True,
+            **payload,
+            "paper": {**row, **payload_paper},
+        }
 
-    if kind == "recommend":
+    if kind == "analysis":
+        source_payload = {**row}
+        # Reader mode auto-detection: if URL exists, try one fetch/extraction before first analysis cache.
+        if row.get("url"):
+            try:
+                extracted = extract_paper_from_url(str(row.get("url")))
+                source_payload = {**source_payload, **extracted, "nickname": row.get("nickname") or extracted.get("title", "")}
+                refreshed = create_or_update_paper_for_user(user_id, source_payload)
+                source_payload = {**source_payload, **refreshed}
+            except Exception:  # noqa: BLE001
+                source_payload = {**row}
+        elif row.get("pdf_storage_path"):
+            try:
+                pdf_bytes = download_pdf_from_storage(str(row.get("pdf_storage_path")))
+                if pdf_bytes:
+                    extracted = extract_paper_from_pdf_bytes(pdf_bytes=pdf_bytes, filename="stored.pdf", source_url=str(row.get("url") or ""))
+                    source_payload = {**source_payload, **extracted, "nickname": row.get("nickname") or extracted.get("title", "")}
+                    refreshed = create_or_update_paper_for_user(user_id, source_payload)
+                    source_payload = {**source_payload, **refreshed}
+            except Exception:  # noqa: BLE001
+                source_payload = {**row}
+        analysis_paper = PaperContext(**source_payload)
+        p_hash = _prompt_hash(kind, analysis_paper)
+        payload_json = _build_read_paper_response(source_payload)
+    elif kind == "recommend":
         payload_json = _recommend_related_papers(paper)
     else:
         prompt = _paper_prompt_for_kind(kind, paper)
@@ -369,7 +412,15 @@ def run_cached_paper_ai(
         model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
         payload_json=payload_json,
     )
-    return {"paper_id": paper_id, "kind": kind, "cached": False, **payload_json}
+    latest_row = get_paper_for_user(paper_id, user_id) or row
+    payload_paper = payload_json.get("paper") or {}
+    return {
+        "paper_id": paper_id,
+        "kind": kind,
+        "cached": False,
+        **payload_json,
+        "paper": {**latest_row, **payload_paper},
+    }
 
 
 @router.post("/read-paper/url")
@@ -379,7 +430,7 @@ def read_paper_from_url(payload: ReadPaperUrlRequest, user_id: str = Depends(get
     response_payload = _build_read_paper_response(paper_data)
     if payload.persist:
         paper_record = create_or_update_paper_for_user(user_id, response_payload["paper"])
-        response_payload["paper"] = {**response_payload["paper"], "id": paper_record["id"]}
+        response_payload["paper"] = {**paper_record, **response_payload["paper"], "id": paper_record["id"]}
         for collection_id in payload.collection_ids:
             add_paper_to_collection(collection_id, paper_record["id"], user_id)
         prompt_hash = _prompt_hash("analysis", PaperContext(**response_payload["paper"]))
@@ -436,7 +487,7 @@ def read_paper_from_pdf(payload: ReadPaperPdfRequest, user_id: str = Depends(get
     response_payload = _build_read_paper_response(paper_data)
     if payload.persist:
         paper_record = create_or_update_paper_for_user(user_id, response_payload["paper"])
-        response_payload["paper"] = {**response_payload["paper"], "id": paper_record["id"]}
+        response_payload["paper"] = {**paper_record, **response_payload["paper"], "id": paper_record["id"]}
         for collection_id in payload.collection_ids:
             add_paper_to_collection(collection_id, paper_record["id"], user_id)
         prompt_hash = _prompt_hash("analysis", PaperContext(**response_payload["paper"]))

@@ -2,7 +2,7 @@ from hashlib import sha256
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, HttpUrl
 
 try:
     from ..services.paper_reader_service import extract_paper_from_url
@@ -12,6 +12,7 @@ try:
         batch_add_papers_to_collection,
         batch_remove_papers_from_collection,
         create_or_update_paper_for_user,
+        create_signed_pdf_url,
         get_current_user_id,
         get_or_update_paper_note,
         get_paper_for_user,
@@ -21,6 +22,8 @@ try:
         list_saved_papers,
         save_paper,
         upload_pdf_for_user,
+        update_paper_nickname_for_user,
+        update_paper_url_for_user,
     )
 except ImportError:
     from services.paper_reader_service import extract_paper_from_url
@@ -30,6 +33,7 @@ except ImportError:
         batch_add_papers_to_collection,
         batch_remove_papers_from_collection,
         create_or_update_paper_for_user,
+        create_signed_pdf_url,
         get_current_user_id,
         get_or_update_paper_note,
         get_paper_for_user,
@@ -39,6 +43,8 @@ except ImportError:
         list_saved_papers,
         save_paper,
         upload_pdf_for_user,
+        update_paper_nickname_for_user,
+        update_paper_url_for_user,
     )
 
 router = APIRouter(tags=["papers"])
@@ -48,6 +54,7 @@ class SavePaperRequest(BaseModel):
     external_paper_id: str = ""
     source: str = Field(default="Manual", min_length=1)
     title: str = Field(min_length=1)
+    nickname: str = ""
     authors: list[str] = Field(default_factory=list)
     year: int | None = None
     abstract: str = ""
@@ -60,6 +67,7 @@ class IngestPaperRequest(BaseModel):
     source: str = Field(default="Manual", min_length=1)
     external_paper_id: str = ""
     title: str = ""
+    nickname: str = ""
     authors: list[str] = Field(default_factory=list)
     year: int | None = None
     abstract: str = ""
@@ -76,6 +84,14 @@ class BatchCollectionRequest(BaseModel):
 
 class PaperNoteRequest(BaseModel):
     content: str = ""
+
+
+class PaperNicknameRequest(BaseModel):
+    nickname: str = ""
+
+
+class PaperUrlRequest(BaseModel):
+    url: HttpUrl
 
 
 @router.get("/papers/search")
@@ -157,6 +173,44 @@ def put_paper_note(paper_id: str, payload: PaperNoteRequest, user_id: str = Depe
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Paper not found.")
     note = get_or_update_paper_note(paper_id, user_id, content=payload.content)
     return {"note": note}
+
+
+@router.put("/papers/{paper_id}/nickname")
+def put_paper_nickname(
+    paper_id: str,
+    payload: PaperNicknameRequest,
+    user_id: str = Depends(get_current_user_id),
+) -> dict:
+    paper = update_paper_nickname_for_user(paper_id, user_id, payload.nickname)
+    if not paper:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Paper not found.")
+    return {"paper": paper}
+
+
+@router.put("/papers/{paper_id}/url")
+def put_paper_url(
+    paper_id: str,
+    payload: PaperUrlRequest,
+    user_id: str = Depends(get_current_user_id),
+) -> dict:
+    paper = update_paper_url_for_user(paper_id, user_id, str(payload.url))
+    if not paper:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Paper not found.")
+    return {"paper": paper}
+
+
+@router.get("/papers/{paper_id}/pdf-download-url")
+def get_paper_pdf_download_url(paper_id: str, user_id: str = Depends(get_current_user_id)) -> dict:
+    paper = get_paper_for_user(paper_id, user_id)
+    if not paper:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Paper not found.")
+    pdf_storage_path = str(paper.get("pdf_storage_path") or "").strip()
+    if not pdf_storage_path:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No PDF file saved for this paper.")
+    signed_url = create_signed_pdf_url(pdf_storage_path, expires_in_seconds=3600)
+    if not signed_url:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Could not generate PDF download URL.")
+    return {"download_url": signed_url, "expires_in_seconds": 3600}
 
 
 @router.post("/collections/{collection_id}/papers:batchAdd")

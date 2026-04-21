@@ -7,15 +7,24 @@ create table if not exists papers (
   source text not null default 'Manual',
   external_paper_id text,
   title text not null,
+  nickname text not null default '',
   authors_json jsonb not null default '[]'::jsonb,
   year int,
   abstract text not null default '',
   canonical_url text not null default '',
   pdf_storage_path text,
   content_hash text,
+  citation_mla text not null default '',
+  citation_apa text not null default '',
+  citation_chicago text not null default '',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table papers add column if not exists nickname text not null default '';
+alter table papers add column if not exists citation_mla text not null default '';
+alter table papers add column if not exists citation_apa text not null default '';
+alter table papers add column if not exists citation_chicago text not null default '';
 
 create unique index if not exists papers_user_source_external_idx
   on papers(user_id, source, external_paper_id)

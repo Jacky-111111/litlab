@@ -14,7 +14,10 @@
     <header class="topbar">
       <div class="container">
         <a class="brand" href="dashboard.html">LitLab</a>
-        <a class="button secondary" href="dashboard.html">Back to Dashboard</a>
+        <div class="inline-actions">
+          <a id="back-to-library-btn" class="button secondary" href="library.html" hidden>Back to Library</a>
+          <a class="button secondary" href="dashboard.html">Back to Dashboard</a>
+        </div>
       </div>
     </header>
 
@@ -25,24 +28,24 @@
           Paste a paper URL or upload a PDF. LitLab will generate overview, key terms explanation, domain,
           author analysis, and related paper recommendations.
         </p>
+        <p id="reader-mode-hint" class="muted"></p>
         <p id="read-papers-message" class="message info">Ready to analyze a paper.</p>
       </section>
 
-      <section class="two-col">
-        <article class="panel">
-          <h2>Analyze by URL</h2>
-          <form id="url-form">
+      <section class="panel">
+        <h2>Paper Source</h2>
+        <p class="muted">Use URL or PDF upload here. Saved URL/PDF information for this paper is also shown below.</p>
+        <div class="two-col">
+          <div>
             <label>
               Paper URL
-              <input name="paper_url" type="url" required placeholder="https://arxiv.org/abs/..." />
+              <input id="paper-url-input" type="url" placeholder="https://arxiv.org/abs/..." />
             </label>
-            <button type="submit">Analyze URL</button>
-          </form>
-        </article>
-
-        <article class="panel">
-          <h2>Analyze by PDF</h2>
-          <form id="pdf-form">
+            <div class="inline-actions">
+              <button id="save-paper-url-btn" type="button" class="secondary">Save URL</button>
+            </div>
+          </div>
+          <div>
             <label>
               Upload PDF
               <input id="paper-pdf-input" class="file-input-hidden" name="paper_pdf" type="file" accept="application/pdf,.pdf" />
@@ -51,19 +54,37 @@
                 <span id="selected-pdf-name" class="muted">No file chosen</span>
               </div>
             </label>
-            <button type="submit">Analyze PDF</button>
-          </form>
-        </article>
+          </div>
+        </div>
+        <div id="saved-source-info" class="mini-card muted">
+          Saved source URL and PDF status will appear here after analysis.
+        </div>
+        <div class="inline-actions">
+          <button id="analyze-paper-btn" type="button">Start Analyze</button>
+        </div>
       </section>
 
       <section class="panel">
         <h2>Save Targets</h2>
-        <p class="muted">Analysis is saved to your paper library automatically. Optionally add it to one or more collections now.</p>
+        <label class="checkbox-inline">
+          <input id="persist-to-library" type="checkbox" checked />
+          Save this reading result to my library
+        </label>
+        <p class="muted">If enabled, LitLab saves this paper and optionally links it to selected collections.</p>
         <div id="read-paper-collections" class="grid grid-2"></div>
       </section>
 
       <section class="panel">
         <h2>Analysis Result</h2>
+        <div id="nickname-editor" class="mini-card" hidden>
+          <label>
+            Paper Nickname
+            <input id="paper-nickname-input" type="text" placeholder="Set a nickname for this paper" />
+          </label>
+          <div class="inline-actions">
+            <button id="save-paper-nickname-btn" type="button" class="secondary">Save Nickname</button>
+          </div>
+        </div>
         <div id="paper-meta" class="mini-card muted">No paper analyzed yet.</div>
         <div id="analysis-sections" class="analysis-sections">
           <p class="muted">Run an analysis to see results.</p>
@@ -78,6 +99,27 @@
         <h2>Related Paper Recommendations</h2>
         <p id="related-query" class="muted"></p>
         <div id="related-papers" class="stack"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Citation</h2>
+        <div id="citation-section" class="stack">
+          <article class="mini-card">
+            <h3>MLA</h3>
+            <pre id="citation-mla" class="ai-output"></pre>
+            <button type="button" class="secondary" data-copy-target="citation-mla">Copy MLA</button>
+          </article>
+          <article class="mini-card">
+            <h3>APA</h3>
+            <pre id="citation-apa" class="ai-output"></pre>
+            <button type="button" class="secondary" data-copy-target="citation-apa">Copy APA</button>
+          </article>
+          <article class="mini-card">
+            <h3>Chicago</h3>
+            <pre id="citation-chicago" class="ai-output"></pre>
+            <button type="button" class="secondary" data-copy-target="citation-chicago">Copy Chicago</button>
+          </article>
+        </div>
       </section>
     </main>
   </body>
