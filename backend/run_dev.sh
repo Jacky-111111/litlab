@@ -5,7 +5,7 @@ set -euo pipefail
 # This avoids watchfiles loops from virtualenv/site-packages changes.
 uvicorn main:app \
   --host 127.0.0.1 \
-  --port 8000 \
+  --port 5500 \
   --reload \
   --reload-dir "." \
   --reload-exclude ".venv/*" \
