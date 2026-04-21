@@ -376,6 +376,7 @@ def run_cached_paper_ai(
 
     if kind == "analysis":
         source_payload = {**row}
+        url_fetch_failed = False
         # Reader mode auto-detection: if URL exists, try one fetch/extraction before first analysis cache.
         if row.get("url"):
             try:
@@ -385,7 +386,8 @@ def run_cached_paper_ai(
                 source_payload = {**source_payload, **refreshed}
             except Exception:  # noqa: BLE001
                 source_payload = {**row}
-        elif row.get("pdf_storage_path"):
+                url_fetch_failed = True
+        if row.get("pdf_storage_path") and (url_fetch_failed or not row.get("url")):
             try:
                 pdf_bytes = download_pdf_from_storage(str(row.get("pdf_storage_path")))
                 if pdf_bytes:

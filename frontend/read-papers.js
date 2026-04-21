@@ -331,14 +331,26 @@ async function analyzeFromCurrentSource() {
       });
     } else {
       setMessage("Analyzing URL...");
-      payload = await window.LitLab.apiFetch("/ai/read-paper/url", {
-        method: "POST",
-        body: JSON.stringify({
-          url,
-          persist: persistToggleEl.checked,
-          collection_ids: selectedCollectionIds(),
-        }),
-      });
+      try {
+        payload = await window.LitLab.apiFetch("/ai/read-paper/url", {
+          method: "POST",
+          body: JSON.stringify({
+            url,
+            persist: persistToggleEl.checked,
+            collection_ids: selectedCollectionIds(),
+          }),
+        });
+      } catch (urlError) {
+        // If URL fetch is blocked (e.g. 403) and this saved paper has PDF, fallback to stored-PDF analysis.
+        if (currentPaperId && String(currentPaperData?.pdf_storage_path || "").trim()) {
+          setMessage("URL fetch failed, falling back to saved PDF...", "warning");
+          payload = await window.LitLab.apiFetch(`/ai/papers/${currentPaperId}/analysis`, {
+            method: "POST",
+          });
+        } else {
+          throw urlError;
+        }
+      }
     }
     renderAnalysisResponse(payload);
     setMessage(

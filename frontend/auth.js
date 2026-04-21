@@ -38,6 +38,26 @@ function bindLoggedInState() {
 async function initializeAuth() {
   try {
     supabaseClient = window.LitLab.initSupabaseClient();
+    const { data } = await supabaseClient.auth.getSession();
+    const existingSession = data?.session || null;
+    if (existingSession?.access_token) {
+      localStorage.setItem("litlab_access_token", existingSession.access_token);
+      if (existingSession.user?.email) {
+        localStorage.setItem("litlab_user_email", existingSession.user.email);
+      }
+    }
+
+    supabaseClient.auth.onAuthStateChange((_event, session) => {
+      if (session?.access_token) {
+        localStorage.setItem("litlab_access_token", session.access_token);
+        if (session.user?.email) {
+          localStorage.setItem("litlab_user_email", session.user.email);
+        }
+      } else {
+        window.LitLab.signOutLocal();
+      }
+      bindLoggedInState();
+    });
     setAuthMessage("Enter your credentials to continue.");
   } catch (error) {
     setAuthMessage(error.message, "warning");
@@ -87,7 +107,7 @@ authFormEl.addEventListener("submit", async (event) => {
     }
 
     localStorage.setItem("litlab_access_token", session.access_token);
-    localStorage.setItem("litlab_user_email", email);
+    localStorage.setItem("litlab_user_email", session.user?.email || email);
     setAuthMessage("Signed in successfully.", "success");
     bindLoggedInState();
   } catch (error) {
