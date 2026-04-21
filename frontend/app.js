@@ -67,6 +67,21 @@ function getFrameworkBadgeClass(name) {
   return "badge gray";
 }
 
+function injectGlobalFooter() {
+  if (document.querySelector(".site-footer")) return;
+
+  const footerEl = document.createElement("footer");
+  footerEl.className = "site-footer";
+  footerEl.innerHTML = `
+    <div class="container">
+      <p>Jack Yu ©️2026. Built with help of Cursor.</p>
+    </div>
+  `;
+  document.body.appendChild(footerEl);
+}
+
+injectGlobalFooter();
+
 window.LitLab = {
   LitLabConfig,
   initSupabaseClient,

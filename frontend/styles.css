@@ -20,6 +20,13 @@ body {
   font-family: Inter, "Segoe UI", Roboto, sans-serif;
   background: var(--bg);
   color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
 }
 
 a {
@@ -344,6 +351,19 @@ pre.ai-output {
 
 .footer-space {
   height: 2.5rem;
+}
+
+.site-footer {
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  padding: 0.9rem 0;
+}
+
+.site-footer p {
+  margin: 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.92rem;
 }
 
 @media (max-width: 900px) {
