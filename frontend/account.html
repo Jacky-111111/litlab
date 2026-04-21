@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LitLab | Account Settings</title>
+    <link rel="icon" type="image/png" href="https://img.icons8.com/?size=100&id=aOIjONBdomrC&format=png&color=000000" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="config.js"></script>
+    <script defer src="app.js"></script>
+    <script defer src="account.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="container">
+        <a class="brand" href="dashboard.html">LitLab</a>
+        <a class="button secondary" href="dashboard.html">Back to Dashboard</a>
+      </div>
+    </header>
+
+    <main class="container section account-layout">
+      <section class="panel account-panel">
+        <h1>Account Settings</h1>
+        <p class="muted">Update your profile information used across LitLab.</p>
+        <p id="account-message" class="message info">Loading account information...</p>
+
+        <form id="account-form">
+          <label>
+            Bound Email
+            <input id="account-email" type="email" readonly />
+          </label>
+
+          <label>
+            User ID
+            <input id="account-user-id" type="text" readonly />
+          </label>
+
+          <label>
+            Nickname
+            <input id="account-nickname" name="nickname" type="text" maxlength="80" placeholder="e.g., Jack" />
+          </label>
+
+          <label>
+            School
+            <input
+              id="account-school"
+              name="school"
+              type="text"
+              maxlength="140"
+              placeholder="Enter your school, college, or institution"
+            />
+          </label>
+
+          <div class="inline-actions">
+            <button type="submit">Save Settings</button>
+            <a class="button secondary" href="dashboard.html">Cancel</a>
+          </div>
+        </form>
+      </section>
+    </main>
+  </body>
+</html>

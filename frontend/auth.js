@@ -16,11 +16,11 @@ function setAuthMessage(message, tone = "info") {
 
 function updateModeUi() {
   const isLogin = authMode === "login";
-  modeTitleEl.textContent = isLogin ? "Log in to LitLab" : "Create your LitLab account";
-  submitButtonEl.textContent = isLogin ? "Log In" : "Sign Up";
+  modeTitleEl.textContent = isLogin ? "Sign in to LitLab" : "Create your LitLab account";
+  submitButtonEl.textContent = isLogin ? "Sign In" : "Create Account";
   modeSwitchEl.textContent = isLogin
-    ? "Need an account? Sign up"
-    : "Already have an account? Log in";
+    ? "Need an account? Create one"
+    : "Already have an account? Sign in";
 }
 
 function bindLoggedInState() {
@@ -38,7 +38,7 @@ function bindLoggedInState() {
 async function initializeAuth() {
   try {
     supabaseClient = window.LitLab.initSupabaseClient();
-    setAuthMessage("Ready. You can sign up or log in.");
+    setAuthMessage("Enter your credentials to continue.");
   } catch (error) {
     setAuthMessage(error.message, "warning");
   }
@@ -65,7 +65,7 @@ authFormEl.addEventListener("submit", async (event) => {
     return;
   }
 
-  setAuthMessage("Processing...", "info");
+  setAuthMessage(authMode === "login" ? "Signing in..." : "Creating account...", "info");
 
   try {
     const authResponse =
@@ -88,7 +88,7 @@ authFormEl.addEventListener("submit", async (event) => {
 
     localStorage.setItem("litlab_access_token", session.access_token);
     localStorage.setItem("litlab_user_email", email);
-    setAuthMessage("Logged in successfully.", "success");
+    setAuthMessage("Signed in successfully.", "success");
     bindLoggedInState();
   } catch (error) {
     setAuthMessage(error.message || "Authentication failed.", "error");

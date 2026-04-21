@@ -109,19 +109,24 @@ pip install -r requirements.txt
 ./run_dev.sh
 ```
 
+The default local backend URL is:
+
+- `http://127.0.0.1:5500`
+
 If you prefer not to use the script, run:
 
 ```bash
-uvicorn main:app --reload --reload-dir . --reload-exclude ".venv/*" --reload-exclude "**/.venv/*"
+uvicorn main:app --reload --host 127.0.0.1 --port 5500 --reload-dir . --reload-exclude ".venv/*" --reload-exclude "**/.venv/*"
 ```
 
 ### 2) Frontend
 
-Set public frontend runtime values in `frontend/config.js` before serving:
+Set public frontend runtime values in `frontend/config.js` before serving.
+For local development, make sure the frontend targets backend `5500`:
 
 ```js
 window.__LITLAB_CONFIG__ = {
-  apiBaseUrl: "http://127.0.0.1:8000",
+  apiBaseUrl: "http://localhost:5500",
   supabaseUrl: "https://your-project.supabase.co",
   supabaseAnonKey: "your_supabase_anon_key",
 };
@@ -131,10 +136,16 @@ Serve `frontend/` with any static server (example with Python):
 
 ```bash
 cd frontend
-python3 -m http.server 5500
+python3 -m http.server 8001
 ```
 
-Open [http://127.0.0.1:5500/index.html](http://127.0.0.1:5500/index.html)
+Open [http://127.0.0.1:8001/index.html](http://127.0.0.1:8001/index.html)
+
+Set backend CORS for local frontend origins in `.env`:
+
+```env
+CORS_ORIGINS=http://127.0.0.1:8001,http://localhost:8001,http://[::]:8001,http://[::1]:8001
+```
 
 ## Deploy on Vercel
 

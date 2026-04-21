@@ -27,9 +27,9 @@ def _require_supabase() -> Client:
     return supabase_client
 
 
-def get_current_user_id(
+def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(_auth_scheme),
-) -> str:
+) -> dict[str, str]:
     if credentials is None or not credentials.credentials:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -53,7 +53,15 @@ def get_current_user_id(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not identify authenticated user.",
         )
-    return user_id
+
+    email = getattr(user, "email", "") or ""
+    return {"id": user_id, "email": email}
+
+
+def get_current_user_id(
+    user: dict[str, str] = Depends(get_current_user),
+) -> str:
+    return user["id"]
 
 
 def list_projects_for_user(user_id: str) -> list[dict[str, Any]]:
@@ -145,5 +153,34 @@ def save_paper(project_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to save paper.",
+        )
+    return rows[0]
+
+
+def get_user_profile(user_id: str) -> dict[str, Any] | None:
+    client = _require_supabase()
+    response = (
+        client.table("user_profiles")
+        .select("*")
+        .eq("user_id", user_id)
+        .limit(1)
+        .execute()
+    )
+    rows = response.data or []
+    return rows[0] if rows else None
+
+
+def upsert_user_profile(user_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    client = _require_supabase()
+    response = (
+        client.table("user_profiles")
+        .upsert({**payload, "user_id": user_id}, on_conflict="user_id")
+        .execute()
+    )
+    rows = response.data or []
+    if not rows:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to save profile.",
         )
     return rows[0]

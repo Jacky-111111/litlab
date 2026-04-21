@@ -15,43 +15,30 @@
     <header class="topbar">
       <div class="container">
         <a class="brand" href="index.html">LitLab</a>
-        <a class="button secondary" href="#auth">Get Started</a>
+        <a class="button secondary" href="#auth">Sign In</a>
       </div>
     </header>
 
     <main class="container">
-      <section class="hero">
-        <h1>Move from research confusion to structure.</h1>
-        <p>
-          LitLab helps beginner researchers create project plans, choose research
-          frameworks, discover papers, and understand difficult literature with
-          AI-powered summaries and quiz questions.
-        </p>
-        <div class="cta-row">
-          <a class="button" href="#auth">Sign Up / Log In</a>
-          <a class="button secondary" href="dashboard.html">Go to Dashboard</a>
-        </div>
-      </section>
+      <section class="auth-portal section" id="auth">
+        <article class="panel portal-intro">
+          <p class="portal-kicker">Research Workspace</p>
+          <h1>Move from research confusion to structure.</h1>
+          <p class="muted">
+            LitLab gives you one focused workspace to plan projects, analyze papers,
+            and generate research-ready outputs.
+          </p>
+          <ul class="portal-points">
+            <li>Structured project planning with research frameworks.</li>
+            <li>Paper discovery, saving, and AI-assisted analysis.</li>
+            <li>A clean workflow designed for students and early researchers.</li>
+          </ul>
+        </article>
 
-      <section class="section grid grid-3">
-        <article class="card">
-          <h3>1) Start a project</h3>
-          <p class="muted">Create your topic and choose IMRAD, Review, Theoretical, or Case Study.</p>
-        </article>
-        <article class="card">
-          <h3>2) Search and save papers</h3>
-          <p class="muted">Use Semantic Scholar search and build a project reading list.</p>
-        </article>
-        <article class="card">
-          <h3>3) Understand faster</h3>
-          <p class="muted">Generate summaries, beginner explanations, and conceptual quizzes.</p>
-        </article>
-      </section>
-
-      <section class="section" id="auth">
-        <article class="panel">
+        <article class="panel portal-auth">
           <h2 id="auth-mode-title">Log in to LitLab</h2>
-          <p id="auth-message" class="message info">Log in to continue your research projects.</p>
+          <p class="auth-subtitle muted">Sign in with your email to continue.</p>
+          <p id="auth-message" class="message info">Enter your credentials to continue.</p>
           <form id="auth-form">
             <label>
               Email
@@ -72,8 +59,6 @@
           </div>
         </article>
       </section>
-
-      <div class="footer-space"></div>
     </main>
   </body>
 </html>

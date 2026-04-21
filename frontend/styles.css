@@ -52,11 +52,13 @@ a {
   justify-content: space-between;
   align-items: center;
   min-height: 70px;
+  font-weight: 700;
 }
 
 .brand {
-  font-weight: 700;
-  font-size: 1.15rem;
+  font-weight: 800;
+  font-size: 1.45rem;
+  letter-spacing: 0.01em;
 }
 
 .hero {
@@ -184,6 +186,64 @@ label {
   margin: 2rem auto;
 }
 
+.auth-portal {
+  display: grid;
+  grid-template-columns: minmax(420px, 1.1fr) minmax(360px, 0.9fr);
+  gap: 1rem;
+  align-items: stretch;
+  margin: 2.5rem auto 2rem;
+}
+
+.portal-intro {
+  display: grid;
+  align-content: center;
+  gap: 0.8rem;
+  padding: 2rem;
+}
+
+.portal-kicker {
+  margin: 0;
+  color: var(--primary);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+}
+
+.portal-intro h1 {
+  margin: 0;
+  font-size: clamp(2rem, 3.8vw, 3rem);
+  line-height: 1.15;
+}
+
+.portal-intro p {
+  margin: 0;
+  line-height: 1.65;
+}
+
+.portal-points {
+  margin: 0.4rem 0 0;
+  padding-left: 1.1rem;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.portal-points li + li {
+  margin-top: 0.35rem;
+}
+
+.portal-auth {
+  padding: 1.35rem;
+}
+
+.portal-auth h2 {
+  margin-bottom: 0.3rem;
+}
+
+.auth-subtitle {
+  margin: 0 0 0.8rem;
+}
+
 .stack {
   display: grid;
   gap: 1rem;
@@ -207,6 +267,14 @@ label {
 
 .project-layout > * {
   width: 100%;
+}
+
+.account-layout {
+  max-width: 720px;
+}
+
+.account-panel h1 {
+  margin-bottom: 0.4rem;
 }
 
 .read-papers-layout .mini-card p {
@@ -367,6 +435,10 @@ pre.ai-output {
 }
 
 @media (max-width: 900px) {
+  .auth-portal {
+    grid-template-columns: 1fr;
+  }
+
   .dashboard-layout {
     grid-template-columns: 1fr;
   }
