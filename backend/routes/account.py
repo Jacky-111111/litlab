@@ -35,6 +35,7 @@ def get_profile(user: dict[str, str] = Depends(get_current_user)) -> dict:
             "email": email,
             "nickname": profile.get("nickname", ""),
             "school": profile.get("school", ""),
+            "public_handle": profile.get("public_handle", ""),
         }
     }
 
@@ -44,13 +45,14 @@ def update_profile(payload: AccountProfileUpdateRequest, user: dict[str, str] = 
     user_id = user["id"]
     email = user["email"]
     now_iso = datetime.now(timezone.utc).isoformat()
-    existing = get_user_profile(user_id)
+    existing = get_user_profile(user_id) or {}
     profile = upsert_user_profile(
         user_id=user_id,
         payload={
             "nickname": payload.nickname.strip(),
             "school": payload.school.strip(),
-            "created_at": (existing or {}).get("created_at", now_iso),
+            "email": email,
+            "created_at": existing.get("created_at", now_iso),
             "updated_at": now_iso,
         },
     )
@@ -60,5 +62,6 @@ def update_profile(payload: AccountProfileUpdateRequest, user: dict[str, str] = 
             "email": email,
             "nickname": profile.get("nickname", ""),
             "school": profile.get("school", ""),
+            "public_handle": profile.get("public_handle", ""),
         }
     }

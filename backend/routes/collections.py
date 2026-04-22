@@ -9,10 +9,14 @@ try:
         batch_remove_papers_from_collection,
         create_collection_for_user,
         delete_collection_for_user,
+        generate_unique_share_slug,
         get_collection_for_user,
         get_current_user_id,
         list_collections_for_user,
         list_papers_in_collection,
+        list_shared_emails,
+        replace_shared_emails,
+        set_collection_share_slug,
         update_collection_for_user,
     )
 except ImportError:
@@ -21,17 +25,36 @@ except ImportError:
         batch_remove_papers_from_collection,
         create_collection_for_user,
         delete_collection_for_user,
+        generate_unique_share_slug,
         get_collection_for_user,
         get_current_user_id,
         list_collections_for_user,
         list_papers_in_collection,
+        list_shared_emails,
+        replace_shared_emails,
+        set_collection_share_slug,
         update_collection_for_user,
     )
 
 router = APIRouter(prefix="/collections", tags=["collections"])
 
 
-Visibility = Literal["private", "link", "public"]
+Visibility = Literal["private", "selected", "public"]
+
+
+def _share_url_path(slug: str | None) -> str | None:
+    if not slug:
+        return None
+    return f"/shared-collection.html?slug={slug}"
+
+
+def _sharing_response(collection: dict, emails: list[str]) -> dict:
+    return {
+        "visibility": collection.get("visibility"),
+        "share_slug": collection.get("share_slug"),
+        "share_url_path": _share_url_path(collection.get("share_slug")),
+        "invited_emails": emails,
+    }
 
 
 class CollectionCreateRequest(BaseModel):
@@ -49,6 +72,11 @@ class CollectionUpdateRequest(BaseModel):
 
 class BatchCollectionRequest(BaseModel):
     paper_ids: list[str] = Field(default_factory=list)
+
+
+class SharingUpdateRequest(BaseModel):
+    visibility: Visibility | None = None
+    invited_emails: list[str] | None = None
 
 
 @router.get("")
@@ -142,3 +170,79 @@ def batch_remove_collection_papers(
 ) -> dict:
     removed = batch_remove_papers_from_collection(collection_id, payload.paper_ids, user_id)
     return {"removed": removed}
+
+
+# ---------------------------------------------------------------------------
+# Sharing settings (owner-only)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/{collection_id}/sharing")
+def get_collection_sharing(
+    collection_id: str,
+    user_id: str = Depends(get_current_user_id),
+) -> dict:
+    collection = get_collection_for_user(collection_id, user_id)
+    if not collection:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Collection not found.")
+    emails = list_shared_emails(collection_id)
+    return _sharing_response(collection, emails)
+
+
+@router.patch("/{collection_id}/sharing")
+def update_collection_sharing(
+    collection_id: str,
+    payload: SharingUpdateRequest,
+    user_id: str = Depends(get_current_user_id),
+) -> dict:
+    collection = get_collection_for_user(collection_id, user_id)
+    if not collection:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Collection not found.")
+
+    target_visibility = payload.visibility or collection.get("visibility") or "private"
+
+    # Ensure a slug exists for shareable states; keep existing slug if we flip
+    # back to private (harmless — just ignored until the owner flips again).
+    current_slug = collection.get("share_slug")
+    if target_visibility in ("selected", "public") and not current_slug:
+        new_slug = generate_unique_share_slug()
+        updated = set_collection_share_slug(collection_id, user_id, new_slug)
+        if updated:
+            collection = updated
+
+    if payload.visibility and payload.visibility != collection.get("visibility"):
+        updated = update_collection_for_user(
+            collection_id, user_id, {"visibility": payload.visibility}
+        )
+        if updated:
+            collection = updated
+
+    if payload.invited_emails is not None:
+        replace_shared_emails(collection_id, user_id, payload.invited_emails)
+
+    emails = list_shared_emails(collection_id)
+    return _sharing_response(collection, emails)
+
+
+@router.post("/{collection_id}/sharing/regenerate-link")
+def regenerate_collection_share_link(
+    collection_id: str,
+    user_id: str = Depends(get_current_user_id),
+) -> dict:
+    collection = get_collection_for_user(collection_id, user_id)
+    if not collection:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Collection not found.")
+    if collection.get("visibility") not in ("selected", "public"):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Switch the collection to 'selected' or 'public' before regenerating a link.",
+        )
+    new_slug = generate_unique_share_slug()
+    updated = set_collection_share_slug(collection_id, user_id, new_slug)
+    if not updated:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not update share link.",
+        )
+    emails = list_shared_emails(collection_id)
+    return _sharing_response(updated, emails)

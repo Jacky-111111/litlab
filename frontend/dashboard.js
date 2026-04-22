@@ -12,9 +12,22 @@ const collectionsEmptyEl = document.getElementById("collections-empty-state");
 const collectionSettingsDialogEl = document.getElementById("collection-settings-dialog");
 const collectionSettingsFormEl = document.getElementById("collection-settings-form");
 const collectionSettingsMessageEl = document.getElementById("collection-settings-message");
+const visibilitySelectEl = document.getElementById("collection-visibility-select");
+const sharingLinkSectionEl = document.getElementById("sharing-link-section");
+const sharingLinkInputEl = document.getElementById("sharing-link-input");
+const sharingLinkCopyEl = document.getElementById("sharing-link-copy");
+const sharingLinkRegenerateEl = document.getElementById("sharing-link-regenerate");
+const sharingEmailsSectionEl = document.getElementById("sharing-emails-section");
+const sharingEmailsInputEl = document.getElementById("sharing-emails-input");
 
 let collectionsCache = [];
 let primaryCollectionIdSet = new Set();
+let sharingStateForOpenDialog = {
+  collectionId: "",
+  share_slug: null,
+  share_url_path: null,
+  invited_emails: [],
+};
 
 const escapeHtml = (value) =>
   String(value ?? "")
@@ -85,7 +98,8 @@ function paperPreviewCard(paper) {
 
 function collectionCardTemplate(collection, paperCount, isPrimaryForAnyProject) {
   const visibility = collection.visibility || "private";
-  const visibilityClass = visibility === "public" ? "violet" : visibility === "link" ? "teal" : "gray";
+  const visibilityClass =
+    visibility === "public" ? "violet" : visibility === "selected" ? "teal" : "gray";
   const primaryBadge = isPrimaryForAnyProject
     ? `<span class="badge primary-badge">Primary</span>`
     : "";
@@ -281,19 +295,72 @@ function setCollectionDialogMessage(text, tone = "info") {
   collectionSettingsMessageEl.hidden = false;
 }
 
+function absoluteShareUrl(path) {
+  if (!path) return "";
+  try {
+    return new URL(path, window.location.origin).toString();
+  } catch (_error) {
+    return path;
+  }
+}
+
+function applySharingSections(visibility) {
+  const normalized = visibility || "private";
+  const shareable = normalized === "selected" || normalized === "public";
+  if (sharingLinkSectionEl) sharingLinkSectionEl.hidden = !shareable;
+  if (sharingEmailsSectionEl) sharingEmailsSectionEl.hidden = normalized !== "selected";
+}
+
+function applySharingState(state) {
+  sharingStateForOpenDialog = {
+    collectionId: state?.collectionId || sharingStateForOpenDialog.collectionId,
+    share_slug: state?.share_slug ?? null,
+    share_url_path: state?.share_url_path ?? null,
+    invited_emails: state?.invited_emails ?? [],
+  };
+  const url = absoluteShareUrl(sharingStateForOpenDialog.share_url_path);
+  if (sharingLinkInputEl) sharingLinkInputEl.value = url;
+  if (sharingEmailsInputEl) {
+    sharingEmailsInputEl.value = (sharingStateForOpenDialog.invited_emails || []).join("\n");
+  }
+}
+
+async function loadCollectionSharing(collectionId) {
+  try {
+    const data = await window.LitLab.apiFetch(`/collections/${collectionId}/sharing`);
+    applySharingState({
+      collectionId,
+      share_slug: data.share_slug ?? null,
+      share_url_path: data.share_url_path ?? null,
+      invited_emails: data.invited_emails ?? [],
+    });
+  } catch (error) {
+    setCollectionDialogMessage(error.message || "Could not load sharing settings.", "error");
+  }
+}
+
 function openCollectionSettings(collectionId) {
   const collection = collectionsCache.find((c) => c.id === collectionId);
   if (!collection || !collectionSettingsDialogEl || !collectionSettingsFormEl) return;
+  const visibility = collection.visibility || "private";
   collectionSettingsFormEl.elements.collection_id.value = collection.id;
   collectionSettingsFormEl.elements.title.value = collection.title || "";
   collectionSettingsFormEl.elements.description.value = collection.description || "";
-  collectionSettingsFormEl.elements.visibility.value = collection.visibility || "private";
+  collectionSettingsFormEl.elements.visibility.value = visibility;
+  applySharingState({
+    collectionId: collection.id,
+    share_slug: null,
+    share_url_path: null,
+    invited_emails: [],
+  });
+  applySharingSections(visibility);
   setCollectionDialogMessage("");
   if (typeof collectionSettingsDialogEl.showModal === "function") {
     collectionSettingsDialogEl.showModal();
   } else {
     collectionSettingsDialogEl.setAttribute("open", "");
   }
+  loadCollectionSharing(collection.id);
 }
 
 function closeCollectionSettings() {
@@ -314,6 +381,60 @@ collectionSettingsFormEl?.addEventListener("click", (event) => {
   }
 });
 
+function parseEmailList(raw) {
+  return (raw || "")
+    .split(/[\n,;]+/)
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
+visibilitySelectEl?.addEventListener("change", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLSelectElement)) return;
+  applySharingSections(target.value);
+});
+
+sharingLinkCopyEl?.addEventListener("click", async () => {
+  const url = sharingLinkInputEl?.value || "";
+  if (!url) return;
+  try {
+    await navigator.clipboard.writeText(url);
+    setCollectionDialogMessage("Link copied.", "success");
+  } catch (_error) {
+    sharingLinkInputEl?.select();
+    setCollectionDialogMessage("Copy failed. Select and copy manually.", "warning");
+  }
+});
+
+sharingLinkRegenerateEl?.addEventListener("click", async () => {
+  const collectionId = sharingStateForOpenDialog.collectionId;
+  const visibility = visibilitySelectEl?.value || "private";
+  if (!collectionId) return;
+  if (visibility === "private") {
+    setCollectionDialogMessage(
+      "Switch visibility to Selected or Public, click Save, then regenerate the link.",
+      "warning"
+    );
+    return;
+  }
+  setCollectionDialogMessage("Generating new link...");
+  try {
+    const data = await window.LitLab.apiFetch(
+      `/collections/${collectionId}/sharing/regenerate-link`,
+      { method: "POST" }
+    );
+    applySharingState({
+      collectionId,
+      share_slug: data.share_slug ?? null,
+      share_url_path: data.share_url_path ?? null,
+      invited_emails: data.invited_emails ?? sharingStateForOpenDialog.invited_emails,
+    });
+    setCollectionDialogMessage("New link generated.", "success");
+  } catch (error) {
+    setCollectionDialogMessage(error.message || "Could not regenerate link.", "error");
+  }
+});
+
 collectionSettingsFormEl?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const formData = new FormData(collectionSettingsFormEl);
@@ -328,10 +449,34 @@ collectionSettingsFormEl?.addEventListener("submit", async (event) => {
   }
   setCollectionDialogMessage("Saving...");
   try {
+    // 1. Save title / description (visibility is updated via the sharing route
+    //    below so slug auto-generation happens in one place).
     await window.LitLab.apiFetch(`/collections/${collectionId}`, {
       method: "PUT",
-      body: JSON.stringify({ title, description, visibility }),
+      body: JSON.stringify({ title, description }),
     });
+
+    // 2. Save sharing settings — visibility + (optionally) invited emails.
+    const sharingPayload = { visibility };
+    if (visibility === "selected") {
+      sharingPayload.invited_emails = parseEmailList(sharingEmailsInputEl?.value || "");
+    } else {
+      sharingPayload.invited_emails = [];
+    }
+    const sharingData = await window.LitLab.apiFetch(
+      `/collections/${collectionId}/sharing`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(sharingPayload),
+      }
+    );
+    applySharingState({
+      collectionId,
+      share_slug: sharingData.share_slug ?? null,
+      share_url_path: sharingData.share_url_path ?? null,
+      invited_emails: sharingData.invited_emails ?? [],
+    });
+
     setCollectionDialogMessage("Saved.", "success");
     closeCollectionSettings();
     await loadCollections();

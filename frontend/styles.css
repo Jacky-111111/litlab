@@ -1011,3 +1011,117 @@ pre.ai-output {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- Collection sharing UI ---------- */
+
+.dialog-wide {
+  width: min(640px, 94vw);
+}
+
+.sharing-section {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px dashed var(--border-color, #d1d5db);
+  border-radius: 10px;
+  background: var(--panel-subtle, rgba(148, 163, 184, 0.08));
+}
+
+.sharing-section h4 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.sharing-section p.muted {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.sharing-link-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.sharing-link-row input[type="text"] {
+  flex: 1 1 220px;
+  min-width: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85rem;
+}
+
+#sharing-emails-input {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85rem;
+  width: 100%;
+}
+
+/* ---------- Shared collection page ---------- */
+
+.shared-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.shared-denied {
+  display: grid;
+  gap: 0.6rem;
+  text-align: center;
+  padding: 2rem 1.5rem;
+}
+
+.shared-denied h2 {
+  margin: 0;
+}
+
+.shared-denied .inline-actions {
+  justify-content: center;
+}
+
+.shared-sharer-panel .sharer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.9rem 1.1rem;
+  margin-top: 0.4rem;
+}
+
+.shared-sharer-panel .sharer-grid p.muted {
+  margin: 0 0 0.1rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.shared-sharer-panel .sharer-grid p {
+  margin: 0;
+  word-break: break-word;
+}
+
+.shared-paper-card {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.shared-paper-card h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.shared-paper-abstract {
+  margin: 0.3rem 0 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 640px) {
+  .sharing-link-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sharing-link-row input[type="text"],
+  .sharing-link-row button {
+    width: 100%;
+  }
+}

@@ -1,5 +1,6 @@
 import os
 import re
+import secrets
 from datetime import datetime, timezone
 from typing import Any
 
@@ -9,6 +10,8 @@ from supabase import Client, create_client
 
 
 _auth_scheme = HTTPBearer(auto_error=False)
+
+VISIBILITY_CHOICES = ("private", "selected", "public")
 
 
 def _build_supabase_client() -> Client | None:
@@ -64,6 +67,32 @@ def get_current_user_id(
     user: dict[str, str] = Depends(get_current_user),
 ) -> str:
     return user["id"]
+
+
+def get_optional_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_auth_scheme),
+) -> dict[str, str] | None:
+    """Like get_current_user, but returns None instead of raising 401.
+
+    Used by shared-access routes where the viewer may be anonymous
+    (public visibility) or signed in (selected visibility).
+    """
+    if credentials is None or not credentials.credentials:
+        return None
+    token = credentials.credentials
+    client = _build_supabase_client()
+    if not client:
+        return None
+    try:
+        response = client.auth.get_user(token)
+    except Exception:  # noqa: BLE001
+        return None
+    user = getattr(response, "user", None)
+    user_id = getattr(user, "id", None)
+    if not user_id:
+        return None
+    email = getattr(user, "email", "") or ""
+    return {"id": user_id, "email": email}
 
 
 def list_projects_for_user(user_id: str) -> list[dict[str, Any]]:
@@ -162,7 +191,7 @@ def create_collection_for_user(user_id: str, payload: dict[str, Any]) -> dict[st
         "description": payload.get("description") or "",
     }
     visibility = payload.get("visibility")
-    if visibility in ("private", "link", "public"):
+    if visibility in VISIBILITY_CHOICES:
         insert_payload["visibility"] = visibility
     share_slug = payload.get("share_slug")
     if isinstance(share_slug, str) and share_slug.strip():
@@ -186,7 +215,7 @@ def update_collection_for_user(
         update_payload["title"] = str(payload["title"])
     if "description" in payload and payload["description"] is not None:
         update_payload["description"] = str(payload["description"])
-    if payload.get("visibility") in ("private", "link", "public"):
+    if payload.get("visibility") in VISIBILITY_CHOICES:
         update_payload["visibility"] = payload["visibility"]
     if "share_slug" in payload:
         slug = payload["share_slug"]
@@ -1001,3 +1030,192 @@ def upsert_user_profile(user_id: str, payload: dict[str, Any]) -> dict[str, Any]
             detail="Failed to save profile.",
         )
     return rows[0]
+
+
+# ---------------------------------------------------------------------------
+# Collection sharing helpers
+# ---------------------------------------------------------------------------
+
+
+def generate_unique_share_slug(length: int = 8, max_attempts: int = 6) -> str:
+    """Return a URL-safe slug that is not already used by any collection."""
+    client = _require_supabase()
+    for _ in range(max_attempts):
+        slug = secrets.token_urlsafe(length)
+        slug = re.sub(r"[^A-Za-z0-9_-]", "", slug)
+        if not slug:
+            continue
+        response = (
+            client.table("collections")
+            .select("id")
+            .eq("share_slug", slug)
+            .limit(1)
+            .execute()
+        )
+        if not (response.data or []):
+            return slug
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail="Could not generate a unique share link. Please try again.",
+    )
+
+
+def set_collection_share_slug(collection_id: str, owner_user_id: str, slug: str | None) -> dict[str, Any] | None:
+    client = _require_supabase()
+    response = (
+        client.table("collections")
+        .update({"share_slug": slug})
+        .eq("id", collection_id)
+        .eq("owner_user_id", owner_user_id)
+        .execute()
+    )
+    rows = response.data or []
+    return rows[0] if rows else None
+
+
+def get_collection_by_slug(share_slug: str) -> dict[str, Any] | None:
+    if not share_slug:
+        return None
+    client = _require_supabase()
+    response = (
+        client.table("collections")
+        .select("*")
+        .eq("share_slug", share_slug)
+        .limit(1)
+        .execute()
+    )
+    rows = response.data or []
+    return rows[0] if rows else None
+
+
+def list_shared_emails(collection_id: str) -> list[str]:
+    client = _require_supabase()
+    response = (
+        client.table("collection_shared_users")
+        .select("invited_email")
+        .eq("collection_id", collection_id)
+        .execute()
+    )
+    rows = response.data or []
+    return [str(row.get("invited_email") or "").strip().lower() for row in rows if row.get("invited_email")]
+
+
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def _normalize_email(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    email = value.strip().lower()
+    if not email or not _EMAIL_RE.match(email):
+        return None
+    return email
+
+
+def replace_shared_emails(
+    collection_id: str,
+    owner_user_id: str,
+    emails: list[str],
+) -> list[str]:
+    """Full-replace the invited-email list for a collection.
+
+    Returns the canonical list of invited emails after the operation.
+    """
+    client = _require_supabase()
+    cleaned: list[str] = []
+    seen: set[str] = set()
+    for raw in emails or []:
+        email = _normalize_email(raw)
+        if email and email not in seen:
+            seen.add(email)
+            cleaned.append(email)
+
+    existing = list_shared_emails(collection_id)
+    existing_set = set(existing)
+    new_set = set(cleaned)
+
+    to_remove = existing_set - new_set
+    to_add = new_set - existing_set
+
+    if to_remove:
+        (
+            client.table("collection_shared_users")
+            .delete()
+            .eq("collection_id", collection_id)
+            .in_("invited_email", list(to_remove))
+            .execute()
+        )
+
+    if to_add:
+        payload = [
+            {
+                "collection_id": collection_id,
+                "invited_email": email,
+                "added_by": owner_user_id,
+            }
+            for email in to_add
+        ]
+        (
+            client.table("collection_shared_users")
+            .upsert(payload, on_conflict="collection_id,invited_email")
+            .execute()
+        )
+
+    return cleaned
+
+
+def mark_invited_user_id(collection_id: str, email: str, user_id: str) -> None:
+    """Best-effort: record which auth user claimed an invited email."""
+    if not email or not user_id:
+        return
+    client = _require_supabase()
+    try:
+        (
+            client.table("collection_shared_users")
+            .update({"invited_user_id": user_id})
+            .eq("collection_id", collection_id)
+            .eq("invited_email", email)
+            .is_("invited_user_id", "null")
+            .execute()
+        )
+    except Exception:  # noqa: BLE001
+        # Non-fatal: the envelope has already been computed.
+        pass
+
+
+def get_sharer_public_profile(owner_user_id: str) -> dict[str, Any]:
+    """Return a safe, public-facing profile blob for a collection owner."""
+    client = _require_supabase()
+
+    profile: dict[str, Any] = {}
+    try:
+        response = (
+            client.table("user_profiles")
+            .select("public_handle,nickname,school,email")
+            .eq("user_id", owner_user_id)
+            .limit(1)
+            .execute()
+        )
+        rows = response.data or []
+        if rows:
+            profile = rows[0]
+    except Exception:  # noqa: BLE001
+        profile = {}
+
+    email = (profile.get("email") or "").strip()
+    if not email:
+        try:
+            admin = getattr(client.auth, "admin", None)
+            if admin and hasattr(admin, "get_user_by_id"):
+                auth_response = admin.get_user_by_id(owner_user_id)
+                auth_user = getattr(auth_response, "user", None)
+                email = (getattr(auth_user, "email", "") or "").strip()
+        except Exception:  # noqa: BLE001
+            email = ""
+
+    return {
+        "email": email or None,
+        "public_handle": (profile.get("public_handle") or None),
+        "nickname": (profile.get("nickname") or None),
+        "school": (profile.get("school") or None),
+    }

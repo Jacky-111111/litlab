@@ -96,7 +96,7 @@
       </section>
     </main>
 
-    <dialog id="collection-settings-dialog" class="dialog">
+    <dialog id="collection-settings-dialog" class="dialog dialog-wide">
       <form id="collection-settings-form" method="dialog" class="dialog-form">
         <h3>Collection Settings</h3>
         <input type="hidden" name="collection_id" />
@@ -110,12 +110,38 @@
         </label>
         <label>
           Visibility
-          <select name="visibility">
-            <option value="private">Private (only you)</option>
-            <option value="link">Link (anyone with the share link)</option>
-            <option value="public">Public (discoverable)</option>
+          <select name="visibility" id="collection-visibility-select">
+            <option value="private">Private — only you</option>
+            <option value="selected">Selected people — sign-in + invited email</option>
+            <option value="public">Public — anyone with the link</option>
           </select>
         </label>
+
+        <section class="sharing-section" id="sharing-link-section" hidden>
+          <h4>Share link</h4>
+          <p class="muted" id="sharing-link-description">
+            Anyone opening this link will be checked by LitLab before the collection is shown.
+          </p>
+          <div class="sharing-link-row">
+            <input type="text" id="sharing-link-input" readonly placeholder="No share link yet." />
+            <button type="button" class="secondary" id="sharing-link-copy">Copy</button>
+            <button type="button" class="secondary" id="sharing-link-regenerate">Regenerate</button>
+          </div>
+        </section>
+
+        <section class="sharing-section" id="sharing-emails-section" hidden>
+          <h4>Invited emails</h4>
+          <p class="muted">
+            Only users signed into LitLab with one of these emails can open the link.
+            Enter one email per line.
+          </p>
+          <textarea
+            id="sharing-emails-input"
+            rows="4"
+            placeholder="name@example.com&#10;another@example.com"
+          ></textarea>
+        </section>
+
         <p id="collection-settings-message" class="message info" hidden></p>
         <div class="dialog-actions">
           <button type="button" class="secondary" data-dialog-action="cancel">Cancel</button>

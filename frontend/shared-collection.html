@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LitLab | Shared Collection</title>
+    <link
+      rel="icon"
+      type="image/png"
+      href="https://img.icons8.com/?size=100&id=aOIjONBdomrC&format=png&color=000000"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script defer src="app.js"></script>
+    <script defer src="shared-collection.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="container">
+        <a class="brand" href="index.html">LitLab</a>
+        <div class="inline-actions" id="shared-topbar-actions">
+          <a class="button secondary" href="index.html" id="shared-sign-in-link">Sign in</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="container section shared-page">
+      <section class="panel" id="shared-loading-panel">
+        <p class="message info">Loading shared collection...</p>
+      </section>
+
+      <section class="panel shared-denied" id="shared-denied-panel" hidden>
+        <h2 id="shared-denied-title">No access</h2>
+        <p class="muted" id="shared-denied-body">This link is not available.</p>
+        <div class="inline-actions" id="shared-denied-actions"></div>
+      </section>
+
+      <section class="stack" id="shared-granted-panel" hidden>
+        <article class="panel" id="shared-collection-panel">
+          <div class="card-head">
+            <h1 id="shared-collection-title">Shared collection</h1>
+            <span class="badge" id="shared-collection-visibility">private</span>
+          </div>
+          <p class="muted" id="shared-collection-description"></p>
+        </article>
+
+        <article class="panel shared-sharer-panel">
+          <h2>Shared by</h2>
+          <div class="sharer-grid">
+            <div>
+              <p class="muted">Nickname</p>
+              <p id="sharer-nickname">—</p>
+            </div>
+            <div>
+              <p class="muted">Public handle</p>
+              <p id="sharer-handle">—</p>
+            </div>
+            <div>
+              <p class="muted">Email</p>
+              <p id="sharer-email">—</p>
+            </div>
+            <div>
+              <p class="muted">School</p>
+              <p id="sharer-school">—</p>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="card-head">
+            <h2>Papers</h2>
+            <span class="badge gray" id="shared-paper-count">0 papers</span>
+          </div>
+          <div id="shared-papers-list" class="stack"></div>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

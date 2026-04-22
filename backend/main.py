@@ -12,6 +12,7 @@ try:
     from .routes.collections import router as collections_router
     from .routes.papers import router as papers_router
     from .routes.projects import router as projects_router
+    from .routes.shared import router as shared_router
 except ImportError:
     # Local fallback when running `uvicorn main:app` inside `backend/`.
     from routes.account import router as account_router
@@ -19,6 +20,7 @@ except ImportError:
     from routes.collections import router as collections_router
     from routes.papers import router as papers_router
     from routes.projects import router as projects_router
+    from routes.shared import router as shared_router
 
 
 def create_app() -> FastAPI:
@@ -46,6 +48,7 @@ def create_app() -> FastAPI:
     app.include_router(collections_router)
     app.include_router(papers_router)
     app.include_router(ai_router)
+    app.include_router(shared_router)
 
     return app
 

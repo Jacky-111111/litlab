@@ -1,0 +1,26 @@
+-- =========================================================
+-- LitLab — Collection sharing v1  (STEP 1 of 2)
+--   file: 0002_collection_sharing__step1_enum.sql
+-- =========================================================
+--
+-- WHY THIS FILE EXISTS
+-- --------------------
+-- PostgreSQL requires that a new enum value added via `ALTER TYPE ... ADD VALUE`
+-- be COMMITTED before any subsequent statement can use it (e.g. `UPDATE ... =
+-- 'selected'`). If you try to do both inside the same transaction you get:
+--
+--   ERROR: 55P04: unsafe use of new value "selected" of enum type ...
+--
+-- Supabase SQL Editor sometimes batches a pasted script into one transaction,
+-- so we split the migration into two files to make the rule obvious.
+--
+-- HOW TO RUN
+-- ----------
+-- 1. Run this file (step 1) in the Supabase SQL Editor.
+-- 2. Then run `0003_collection_sharing__step2_tables.sql`.
+--
+-- This file is idempotent; re-running is safe (the `IF NOT EXISTS` guard
+-- turns the second run into a no-op).
+-- =========================================================
+
+alter type public.collection_visibility add value if not exists 'selected';

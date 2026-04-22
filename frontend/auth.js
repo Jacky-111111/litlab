@@ -14,6 +14,27 @@ function setAuthMessage(message, tone = "info") {
   authMessageEl.className = `message ${tone}`;
 }
 
+function getSafeNextPath() {
+  // Only allow same-origin, relative redirects like "/shared-collection.html?slug=abc".
+  try {
+    const raw = new URL(window.location.href).searchParams.get("next") || "";
+    if (!raw) return "";
+    if (raw.startsWith("//")) return "";
+    if (!raw.startsWith("/")) return "";
+    if (raw.includes("://")) return "";
+    return raw;
+  } catch (_error) {
+    return "";
+  }
+}
+
+function redirectToNextIfProvided() {
+  const next = getSafeNextPath();
+  if (!next) return false;
+  window.location.href = next;
+  return true;
+}
+
 function updateModeUi() {
   const isLogin = authMode === "login";
   modeTitleEl.textContent = isLogin ? "Sign in to LitLab" : "Create your LitLab account";
@@ -29,6 +50,7 @@ function bindLoggedInState() {
     startButtonEl.hidden = false;
     logoutButtonEl.hidden = false;
     setAuthMessage(`Signed in as ${email}`, "success");
+    if (redirectToNextIfProvided()) return;
   } else {
     startButtonEl.hidden = true;
     logoutButtonEl.hidden = true;
@@ -110,6 +132,7 @@ authFormEl.addEventListener("submit", async (event) => {
     localStorage.setItem("litlab_user_email", session.user?.email || email);
     setAuthMessage("Signed in successfully.", "success");
     bindLoggedInState();
+    if (redirectToNextIfProvided()) return;
   } catch (error) {
     setAuthMessage(error.message || "Authentication failed.", "error");
   }
