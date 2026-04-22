@@ -88,6 +88,33 @@ function canPreview() {
   return false;
 }
 
+function resolvedPdfFileLabel() {
+  if (context.hasStoredPdf && context.paperId) {
+    const baseName = context.pdfDisplayName || "Paper";
+    return baseName.toLowerCase().endsWith(".pdf") ? baseName : `${baseName}.pdf`;
+  }
+  if (context.localFile instanceof File) {
+    return context.localFile.name || "document.pdf";
+  }
+  return "";
+}
+
+function syncHeadMetaVisibility() {
+  const has = canPreview();
+  if (panelEl) {
+    panelEl.classList.toggle("read-papers-pdf-preview--has-source", has);
+  }
+  if (headMetaEl) {
+    headMetaEl.hidden = !has;
+  }
+  if (filenameEl) {
+    filenameEl.textContent = has ? resolvedPdfFileLabel() || "PDF" : "";
+  }
+  if (!isPreviewExpanded() && downloadWrap) {
+    downloadWrap.hidden = true;
+  }
+}
+
 function setStatus(text, tone = "info") {
   if (!statusEl) return;
   if (!text) {
@@ -111,9 +138,6 @@ function setExpandedUi(isExpanded) {
   if (panelEl) {
     panelEl.classList.toggle("read-papers-pdf-preview--expanded", isExpanded);
   }
-  if (headMetaEl) {
-    headMetaEl.hidden = !isExpanded;
-  }
   if (previewBodyEl) {
     previewBodyEl.hidden = !isExpanded;
   }
@@ -121,6 +145,7 @@ function setExpandedUi(isExpanded) {
     toggleBtn.textContent = isExpanded ? "Show Less" : "View PDF";
     toggleBtn.setAttribute("aria-expanded", isExpanded ? "true" : "false");
   }
+  syncHeadMetaVisibility();
 }
 
 function isPreviewExpanded() {
@@ -311,6 +336,7 @@ function onContextChanged(ev) {
     pdfDisplayName: String(d.pdfDisplayName || "").trim(),
   };
   syncViewButton();
+  syncHeadMetaVisibility();
   if (isPreviewExpanded() && !canPreview()) {
     void collapse();
   }
@@ -378,4 +404,5 @@ fsBtn?.addEventListener("click", () => {
 document.addEventListener("litlab:paper-context-changed", onContextChanged);
 
 syncViewButton();
+syncHeadMetaVisibility();
 updateZoomLabel();

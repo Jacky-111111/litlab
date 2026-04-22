@@ -820,8 +820,11 @@ label {
   flex-wrap: wrap;
 }
 
-.read-papers-pdf-preview--expanded .pdf-preview-head {
+.read-papers-pdf-preview--has-source .pdf-preview-head {
   justify-content: space-between;
+}
+
+.read-papers-pdf-preview--expanded .pdf-preview-head {
   margin-bottom: 0.75rem;
 }
 
