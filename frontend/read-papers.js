@@ -46,9 +46,10 @@ function paperCardTemplate(paper) {
   const authors = (paper.authors || []).join(", ") || "Unknown author";
   const abstract = paper.abstract || "No abstract available.";
   const snippet = abstract.length > 260 ? `${abstract.slice(0, 260)}...` : abstract;
+  const displayName = (paper.nickname || paper.title || "Untitled paper").trim();
   return `
     <article class="card paper-card">
-      <h4>${paper.title || "Untitled paper"}</h4>
+      <h4>${displayName}</h4>
       <p class="muted">${authors}${paper.year ? ` · ${paper.year}` : ""} · ${paper.source || "Unknown source"}</p>
       <p>${snippet}</p>
       ${

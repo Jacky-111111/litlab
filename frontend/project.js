@@ -10,17 +10,6 @@ const frameworkGuideEl = document.getElementById("framework-guide");
 const notesFormEl = document.getElementById("framework-notes-form");
 const savedPapersEl = document.getElementById("saved-papers");
 const readingListsEl = document.getElementById("project-reading-lists");
-const searchFormEl = document.getElementById("search-form");
-const searchResultsEl = document.getElementById("search-results");
-const batchSaveSearchBtn = document.getElementById("batch-save-search-btn");
-const aiOutputEl = document.getElementById("ai-output");
-const summarizeBtn = document.getElementById("btn-summarize");
-const explainBtn = document.getElementById("btn-explain");
-const quizBtn = document.getElementById("btn-quiz");
-const recommendBtn = document.getElementById("btn-recommend");
-const relatedPapersEl = document.getElementById("related-papers");
-const paperNoteInputEl = document.getElementById("selected-paper-note");
-const savePaperNoteBtn = document.getElementById("save-selected-paper-note");
 const libraryPickerToggleBtn = document.getElementById("library-picker-toggle");
 const libraryPickerBodyEl = document.getElementById("library-picker-body");
 const libraryPickerSourceEl = document.getElementById("library-picker-source");
@@ -31,10 +20,19 @@ const libraryPickerSelectAllBtn = document.getElementById("library-picker-select
 const libraryPickerClearBtn = document.getElementById("library-picker-clear");
 const libraryPickerAddBtn = document.getElementById("library-picker-add");
 
-let selectedPaper = null;
+const advisorRunBtn = document.getElementById("advisor-run-btn");
+const advisorMessageEl = document.getElementById("advisor-message");
+const advisorBodyEl = document.getElementById("advisor-body");
+const advisorMetaEl = document.getElementById("advisor-meta");
+const advisorSummaryEl = document.getElementById("advisor-summary");
+const advisorScoresEl = document.getElementById("advisor-scores");
+const advisorDirectionsEl = document.getElementById("advisor-directions");
+const advisorInnovationsEl = document.getElementById("advisor-innovations");
+const advisorRisksEl = document.getElementById("advisor-risks");
+const advisorNextStepsEl = document.getElementById("advisor-next-steps");
+
 let attachedCollections = [];
 let primaryCollectionId = null;
-const searchPaperMap = new Map();
 
 let libraryPickerSource = "library";
 let libraryPickerPapers = [];
@@ -85,48 +83,23 @@ function renderGuidance(guidance) {
     .join("");
 }
 
-function paperCard(paper, includeSave = false) {
-  const paperKey = includeSave
-    ? [paper.external_paper_id || "", paper.title || "", paper.source || ""].join("::")
-    : paper.id || paper.external_paper_id || "";
+function paperCard(paper) {
+  const paperId = paper.id || paper.external_paper_id || "";
   const authors = (paper.authors || []).join(", ") || "Unknown author";
   const abstract = paper.abstract || "No abstract available for this paper.";
   const abstractSnippet = abstract.length > 280 ? `${abstract.slice(0, 280)}...` : abstract;
+  const displayName = (paper.nickname || paper.title || "Untitled").trim();
   return `
-    <article class="card paper-card" data-paper-id="${paper.id || paper.external_paper_id || ""}" data-paper-key="${paperKey}">
-      <h4>${paper.title}</h4>
+    <article class="card paper-card" data-paper-id="${paperId}">
+      ${paper.url ? `<a class="paper-card-source-link" href="${paper.url}" target="_blank" rel="noopener noreferrer">Open Source</a>` : ""}
+      <h4>${escapeHtml(displayName)}</h4>
       <p class="muted">${authors} ${paper.year ? `· ${paper.year}` : ""} · ${paper.source || "Unknown source"}</p>
       <p>${abstractSnippet}</p>
       <div class="paper-actions">
-        ${
-          includeSave
-            ? `<label class="checkbox-inline"><input type="checkbox" data-action="batch-save-paper" value="${paperKey}" /> Select</label>`
-            : ""
-        }
-        ${paper.url ? `<a class="secondary" href="${paper.url}" target="_blank" rel="noopener noreferrer">Open Source</a>` : ""}
-        ${
-          includeSave
-            ? `<button data-action="save-paper" data-paper='${JSON.stringify(paper)
-                .replace(/'/g, "&apos;")}'>Save to Primary List</button>`
-            : `<button data-action="select-paper" data-paper='${JSON.stringify(paper)
-                .replace(/'/g, "&apos;")}'>Analyze</button>`
-        }
+        ${paper.id ? `<button data-action="read-paper" data-paper-id="${paper.id}">Read Paper</button>` : ""}
       </div>
     </article>
   `;
-}
-
-async function loadSelectedPaperNote() {
-  if (!selectedPaper?.id) {
-    paperNoteInputEl.value = "";
-    return;
-  }
-  try {
-    const response = await window.LitLab.apiFetch(`/papers/${selectedPaper.id}`);
-    paperNoteInputEl.value = response.note?.content || "";
-  } catch (_error) {
-    paperNoteInputEl.value = "";
-  }
 }
 
 async function loadProjectDetail() {
@@ -158,16 +131,10 @@ async function loadSavedPapers() {
     });
     if (!papers.length) {
       savedPapersEl.innerHTML = "<p class='muted'>No saved papers yet.</p>";
-      selectedPaper = null;
       renderLibraryPickerResults();
       return;
     }
-    savedPapersEl.innerHTML = papers.map((paper) => paperCard(paper, false)).join("");
-    if (!selectedPaper) {
-      selectedPaper = papers[0];
-      aiOutputEl.textContent = `Selected paper: ${selectedPaper.title}`;
-      loadSelectedPaperNote();
-    }
+    savedPapersEl.innerHTML = papers.map((paper) => paperCard(paper)).join("");
     renderLibraryPickerResults();
   } catch (error) {
     savedPapersEl.innerHTML = `<p class='message error'>${error.message || "Could not load saved papers."}</p>`;
@@ -227,75 +194,15 @@ function ensurePrimaryCollectionId() {
   return primaryCollectionId;
 }
 
-searchFormEl.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const formData = new FormData(searchFormEl);
-  const query = String(formData.get("query") || "").trim();
-  if (!query) {
-    setMessage("Enter a keyword to search papers.", "warning");
-    return;
-  }
-
-  setMessage("Searching papers...");
-  searchResultsEl.innerHTML = "<p class='muted'>Searching...</p>";
-  try {
-    const response = await window.LitLab.apiFetch(`/papers/search?q=${encodeURIComponent(query)}`);
-    const papers = response.papers || [];
-    searchPaperMap.clear();
-    papers.forEach((paper) => {
-      const key = [paper.external_paper_id || "", paper.title || "", paper.source || ""].join("::");
-      searchPaperMap.set(key, paper);
-    });
-    if (!papers.length) {
-      searchResultsEl.innerHTML = "<p class='muted'>No papers found for this search.</p>";
-      setMessage("No papers found.", "warning");
-      return;
-    }
-    searchResultsEl.innerHTML = papers.map((paper) => paperCard(paper, true)).join("");
-    setMessage(`Found ${papers.length} papers.`, "success");
-  } catch (error) {
-    searchResultsEl.innerHTML = "<p class='muted'>Search failed.</p>";
-    setMessage(error.message || "Could not search papers.", "error");
-  }
-});
-
-searchResultsEl.addEventListener("click", async (event) => {
-  const target = event.target;
-  if (!(target instanceof HTMLButtonElement)) return;
-  if (target.dataset.action !== "save-paper") return;
-
-  const paperJson = target.dataset.paper?.replace(/&apos;/g, "'");
-  if (!paperJson) return;
-
-  try {
-    const paper = JSON.parse(paperJson);
-    const collectionId = ensurePrimaryCollectionId();
-    if (!collectionId) return;
-    await window.LitLab.apiFetch("/papers/ingest", {
-      method: "POST",
-      body: JSON.stringify({
-        ...paper,
-        collection_ids: [collectionId],
-      }),
-    });
-    setMessage("Paper saved to this project's primary reading list.", "success");
-    await loadSavedPapers();
-  } catch (error) {
-    setMessage(error.message || "Could not save paper.", "error");
-  }
-});
-
 savedPapersEl.addEventListener("click", (event) => {
   const target = event.target;
   if (!(target instanceof HTMLButtonElement)) return;
-  if (target.dataset.action !== "select-paper") return;
 
-  const paperJson = target.dataset.paper?.replace(/&apos;/g, "'");
-  if (!paperJson) return;
-  selectedPaper = JSON.parse(paperJson);
-  aiOutputEl.textContent = `Selected paper: ${selectedPaper.title}`;
-  relatedPapersEl.innerHTML = "";
-  loadSelectedPaperNote();
+  if (target.dataset.action === "read-paper") {
+    const paperId = target.dataset.paperId;
+    if (!paperId) return;
+    window.location.href = `read-papers.html?paper_id=${encodeURIComponent(paperId)}`;
+  }
 });
 
 notesFormEl.addEventListener("input", (event) => {
@@ -304,110 +211,6 @@ notesFormEl.addEventListener("input", (event) => {
   const section = target.dataset.section;
   if (!section) return;
   localStorage.setItem(notesStorageKey(section), target.value);
-});
-
-async function runAiAction(endpoint) {
-  if (!selectedPaper) {
-    setMessage("Select a saved paper first.", "warning");
-    return;
-  }
-  aiOutputEl.textContent = "Generating...";
-  try {
-    if (selectedPaper.id) {
-      const response = await window.LitLab.apiFetch(`/ai/papers/${selectedPaper.id}/${endpoint}`, {
-        method: "POST",
-      });
-      aiOutputEl.textContent = response.output || "No output returned.";
-    } else {
-      const response = await window.LitLab.apiFetch(`/ai/${endpoint}`, {
-        method: "POST",
-        body: JSON.stringify({ paper: selectedPaper }),
-      });
-      aiOutputEl.textContent = response.output;
-    }
-    setMessage("AI response generated.", "success");
-  } catch (error) {
-    aiOutputEl.textContent = "";
-    setMessage(error.message || "AI action failed.", "error");
-  }
-}
-
-summarizeBtn.addEventListener("click", () => runAiAction("summarize"));
-explainBtn.addEventListener("click", () => runAiAction("explain"));
-quizBtn.addEventListener("click", () => runAiAction("quiz"));
-
-recommendBtn.addEventListener("click", async () => {
-  if (!selectedPaper) {
-    setMessage("Select a saved paper first.", "warning");
-    return;
-  }
-  relatedPapersEl.innerHTML = "<p class='muted'>Finding related papers...</p>";
-  try {
-    const response = selectedPaper.id
-      ? await window.LitLab.apiFetch(`/ai/papers/${selectedPaper.id}/recommend`, { method: "POST" })
-      : await window.LitLab.apiFetch("/ai/recommend", {
-          method: "POST",
-          body: JSON.stringify({ paper: selectedPaper }),
-        });
-    const papers = response.papers || [];
-    if (!papers.length) {
-      relatedPapersEl.innerHTML = "<p class='muted'>No related papers found.</p>";
-      return;
-    }
-    relatedPapersEl.innerHTML = `
-      <p class="muted">Related query: ${response.query}</p>
-      ${papers.map((paper) => paperCard(paper, true)).join("")}
-    `;
-  } catch (error) {
-    relatedPapersEl.innerHTML = `<p class='message error'>${error.message || "Recommendation failed."}</p>`;
-  }
-});
-
-batchSaveSearchBtn.addEventListener("click", async () => {
-  const checked = Array.from(searchResultsEl.querySelectorAll('input[data-action="batch-save-paper"]:checked'));
-  if (!checked.length) {
-    setMessage("Select at least one search result.", "warning");
-    return;
-  }
-  const collectionId = ensurePrimaryCollectionId();
-  if (!collectionId) return;
-  setMessage("Saving selected papers...");
-  try {
-    await Promise.all(
-      checked.map((inputNode) => {
-        const key = inputNode.value;
-        const paper = searchPaperMap.get(key);
-        if (!paper) return Promise.resolve();
-        return window.LitLab.apiFetch("/papers/ingest", {
-          method: "POST",
-          body: JSON.stringify({
-            ...paper,
-            collection_ids: [collectionId],
-          }),
-        });
-      })
-    );
-    setMessage(`Saved ${checked.length} paper(s) to this project's primary reading list.`, "success");
-    await loadSavedPapers();
-  } catch (error) {
-    setMessage(error.message || "Could not batch save papers.", "error");
-  }
-});
-
-savePaperNoteBtn.addEventListener("click", async () => {
-  if (!selectedPaper?.id) {
-    setMessage("Select a saved paper first.", "warning");
-    return;
-  }
-  try {
-    await window.LitLab.apiFetch(`/papers/${selectedPaper.id}/note`, {
-      method: "PUT",
-      body: JSON.stringify({ content: paperNoteInputEl.value || "" }),
-    });
-    setMessage("Paper note saved.", "success");
-  } catch (error) {
-    setMessage(error.message || "Could not save paper note.", "error");
-  }
 });
 
 // ---------------------------------------------------------------------------
@@ -449,7 +252,7 @@ function pickerPaperCard(paper) {
       <label class="checkbox-inline paper-picker-check">
         <input type="checkbox" data-action="picker-select" value="${escapeHtml(paper.id || "")}" ${checked} ${disabled} />
         <span>
-          <strong>${escapeHtml(paper.title || "Untitled")}</strong>
+          <strong>${escapeHtml((paper.nickname || paper.title || "Untitled").trim())}</strong>
           ${alreadyInProject ? "<span class='badge gray'>In project</span>" : ""}
         </span>
       </label>
@@ -616,6 +419,192 @@ libraryPickerAddBtn?.addEventListener("click", async () => {
     setPickerMessage(error.message || "Could not add papers.", "error");
   }
 });
+
+// ---------------------------------------------------------------------------
+// AI Direction Advisor
+// ---------------------------------------------------------------------------
+
+const SCORE_LABELS = {
+  innovation: "Innovation",
+  feasibility: "Feasibility",
+  scope_clarity: "Scope clarity",
+  literature_coverage: "Literature coverage",
+  methodology_strength: "Methodology strength",
+};
+
+function setAdvisorMessage(text, tone = "info") {
+  if (!advisorMessageEl) return;
+  if (!text) {
+    advisorMessageEl.textContent = "";
+    advisorMessageEl.hidden = true;
+    return;
+  }
+  advisorMessageEl.textContent = text;
+  advisorMessageEl.className = `message ${tone}`;
+  advisorMessageEl.hidden = false;
+}
+
+function collectFrameworkNotes() {
+  const notes = {};
+  if (!notesFormEl) return notes;
+  const textareas = notesFormEl.querySelectorAll("textarea[data-section]");
+  textareas.forEach((textarea) => {
+    const section = textarea.dataset.section;
+    if (!section) return;
+    notes[section] = textarea.value || "";
+  });
+  return notes;
+}
+
+function scoreTone(score) {
+  if (score >= 8) return "strong";
+  if (score >= 5) return "okay";
+  return "weak";
+}
+
+function renderAdvisorScores(scores = {}, rationales = {}) {
+  if (!advisorScoresEl) return;
+  const html = Object.keys(SCORE_LABELS)
+    .map((key) => {
+      const raw = Number(scores?.[key]);
+      const value = Number.isFinite(raw) ? Math.max(0, Math.min(10, raw)) : 0;
+      const tone = scoreTone(value);
+      const rationale = rationales?.[key] || "";
+      return `
+        <article class="advisor-score advisor-score-${tone}">
+          <div class="advisor-score-top">
+            <span class="advisor-score-label">${escapeHtml(SCORE_LABELS[key])}</span>
+            <span class="advisor-score-value">${value}<span class="advisor-score-max">/10</span></span>
+          </div>
+          <div class="advisor-score-bar"><span style="width:${value * 10}%"></span></div>
+          ${rationale ? `<p class="advisor-score-rationale">${escapeHtml(rationale)}</p>` : ""}
+        </article>
+      `;
+    })
+    .join("");
+  advisorScoresEl.innerHTML = html;
+}
+
+function renderAdvisorCards(container, items, { primaryKey = "title", bodyKey = "description", footerKey = "" } = {}) {
+  if (!container) return;
+  if (!Array.isArray(items) || !items.length) {
+    container.innerHTML = "<p class='muted'>No suggestions yet.</p>";
+    return;
+  }
+  container.innerHTML = items
+    .map((item) => {
+      const title = escapeHtml(String(item?.[primaryKey] || "Suggestion").trim());
+      const description = escapeHtml(String(item?.[bodyKey] || "").trim());
+      const footerText = footerKey ? String(item?.[footerKey] || "").trim() : "";
+      return `
+        <article class="advisor-card">
+          <h4>${title}</h4>
+          ${description ? `<p>${description}</p>` : ""}
+          ${footerText ? `<p class='muted advisor-card-footer'>${escapeHtml(footerText)}</p>` : ""}
+        </article>
+      `;
+    })
+    .join("");
+}
+
+function renderAdvisorRisks(items) {
+  if (!advisorRisksEl) return;
+  if (!Array.isArray(items) || !items.length) {
+    advisorRisksEl.innerHTML = "<li class='muted'>No specific risks flagged.</li>";
+    return;
+  }
+  advisorRisksEl.innerHTML = items
+    .map((item) => {
+      const label = escapeHtml(String(item?.label || "Risk").trim());
+      const mitigation = escapeHtml(String(item?.mitigation || "").trim());
+      return `
+        <li>
+          <strong>${label}.</strong>
+          ${mitigation ? ` ${mitigation}` : ""}
+        </li>
+      `;
+    })
+    .join("");
+}
+
+function renderAdvisorNextSteps(items) {
+  if (!advisorNextStepsEl) return;
+  if (!Array.isArray(items) || !items.length) {
+    advisorNextStepsEl.innerHTML = "<li class='muted'>No next steps yet.</li>";
+    return;
+  }
+  advisorNextStepsEl.innerHTML = items
+    .map((step) => `<li>${escapeHtml(String(step || "").trim())}</li>`)
+    .join("");
+}
+
+function renderAdvisorMeta(context = {}) {
+  if (!advisorMetaEl) return;
+  const paperCount = Number(context.paper_count || 0);
+  const filledNotes = Number(context.filled_note_count || 0);
+  const noteSections = Number(context.note_section_count || 0);
+  const stamp = context.generated_at ? new Date(context.generated_at).toLocaleString() : "";
+  const parts = [
+    `${paperCount} saved paper${paperCount === 1 ? "" : "s"}`,
+    `${filledNotes}/${noteSections} note section${noteSections === 1 ? "" : "s"} filled`,
+  ];
+  if (stamp) parts.push(`generated ${stamp}`);
+  advisorMetaEl.textContent = parts.join(" · ");
+}
+
+function renderAdvisorResult(result) {
+  if (!advisorBodyEl) return;
+  renderAdvisorMeta(result.context || {});
+  if (advisorSummaryEl) {
+    const summary = String(result.summary || "").trim();
+    advisorSummaryEl.textContent = summary || "No summary generated.";
+  }
+  renderAdvisorScores(result.scores || {}, result.score_rationales || {});
+  renderAdvisorCards(advisorDirectionsEl, result.writing_directions, {
+    primaryKey: "title",
+    bodyKey: "description",
+    footerKey: "based_on",
+  });
+  renderAdvisorCards(advisorInnovationsEl, result.innovation_angles, {
+    primaryKey: "title",
+    bodyKey: "description",
+    footerKey: "rationale",
+  });
+  renderAdvisorRisks(result.risks);
+  renderAdvisorNextSteps(result.next_steps);
+  advisorBodyEl.hidden = false;
+}
+
+async function runAdvisor() {
+  if (!projectId) return;
+  const notes = collectFrameworkNotes();
+
+  setAdvisorMessage("Reading your notes and papers, then drafting suggestions...");
+  if (advisorRunBtn) {
+    advisorRunBtn.disabled = true;
+    advisorRunBtn.dataset.originalText = advisorRunBtn.dataset.originalText || advisorRunBtn.textContent;
+    advisorRunBtn.textContent = "Generating...";
+  }
+
+  try {
+    const response = await window.LitLab.apiFetch(`/ai/projects/${projectId}/advise`, {
+      method: "POST",
+      body: JSON.stringify({ notes }),
+    });
+    renderAdvisorResult(response || {});
+    setAdvisorMessage("Fresh suggestions ready below.", "success");
+  } catch (error) {
+    setAdvisorMessage(error.message || "Could not generate suggestions right now.", "error");
+  } finally {
+    if (advisorRunBtn) {
+      advisorRunBtn.disabled = false;
+      advisorRunBtn.textContent =
+        advisorRunBtn.dataset.originalText || "Generate suggestions";
+    }
+  }
+}
+
+advisorRunBtn?.addEventListener("click", runAdvisor);
 
 loadProjectDetail();
 loadAttachedCollections();

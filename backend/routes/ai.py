@@ -17,7 +17,8 @@ try:
         read_paper_analysis_prompt,
         summary_prompt,
     )
-    from ..services.openai_service import generate_text
+    from ..prompts.project_prompts import project_advisor_prompt
+    from ..services.openai_service import generate_json, generate_text
     from ..services.paper_reader_service import extract_paper_from_pdf_bytes, extract_paper_from_url
     from ..services.paper_search_service import search_author_profiles, search_papers
     from ..services.supabase_service import (
@@ -28,12 +29,16 @@ try:
         get_current_user_id,
         get_paper_ai_cache,
         get_paper_for_user,
+        get_project_for_user,
+        list_collections_for_project,
+        list_papers_in_collection,
         upsert_paper_ai_cache,
         upload_pdf_for_user,
     )
 except ImportError:
     from prompts.paper_prompts import explain_prompt, quiz_prompt, read_paper_analysis_prompt, summary_prompt
-    from services.openai_service import generate_text
+    from prompts.project_prompts import project_advisor_prompt
+    from services.openai_service import generate_json, generate_text
     from services.paper_reader_service import extract_paper_from_pdf_bytes, extract_paper_from_url
     from services.paper_search_service import search_author_profiles, search_papers
     from services.supabase_service import (
@@ -44,6 +49,9 @@ except ImportError:
         get_current_user_id,
         get_paper_ai_cache,
         get_paper_for_user,
+        get_project_for_user,
+        list_collections_for_project,
+        list_papers_in_collection,
         upsert_paper_ai_cache,
         upload_pdf_for_user,
     )
@@ -107,6 +115,10 @@ class ReadPaperPdfRequest(BaseModel):
     pdf_base64: str = Field(min_length=1)
     collection_ids: list[str] = Field(default_factory=list)
     persist: bool = True
+
+
+class ProjectAdvisorRequest(BaseModel):
+    notes: dict[str, str] = Field(default_factory=dict)
 
 
 class AICacheResponse(BaseModel):
@@ -507,3 +519,115 @@ def read_paper_from_pdf(payload: ReadPaperPdfRequest, user_id: str = Depends(get
             },
         )
     return response_payload
+
+
+# ---------------------------------------------------------------------------
+# Project AI Direction Advisor
+# ---------------------------------------------------------------------------
+
+
+def _coerce_score(value, default: int = 0) -> int:
+    try:
+        score = int(round(float(value)))
+    except (TypeError, ValueError):
+        return default
+    return max(0, min(10, score))
+
+
+def _normalize_advisor_payload(raw: dict) -> dict:
+    """Defensive normalization so the frontend always gets the same shape."""
+    score_keys = [
+        "innovation",
+        "feasibility",
+        "scope_clarity",
+        "literature_coverage",
+        "methodology_strength",
+    ]
+
+    raw_scores = raw.get("scores") if isinstance(raw.get("scores"), dict) else {}
+    scores = {key: _coerce_score(raw_scores.get(key)) for key in score_keys}
+
+    raw_rationales = raw.get("score_rationales") if isinstance(raw.get("score_rationales"), dict) else {}
+    rationales = {key: str(raw_rationales.get(key) or "").strip() for key in score_keys}
+
+    def _list_of_dicts(value) -> list[dict]:
+        if not isinstance(value, list):
+            return []
+        return [item for item in value if isinstance(item, dict)]
+
+    def _list_of_strings(value) -> list[str]:
+        if not isinstance(value, list):
+            return []
+        return [str(item).strip() for item in value if str(item).strip()]
+
+    return {
+        "summary": str(raw.get("summary") or "").strip(),
+        "scores": scores,
+        "score_rationales": rationales,
+        "writing_directions": _list_of_dicts(raw.get("writing_directions"))[:6],
+        "innovation_angles": _list_of_dicts(raw.get("innovation_angles"))[:6],
+        "risks": _list_of_dicts(raw.get("risks"))[:5],
+        "next_steps": _list_of_strings(raw.get("next_steps"))[:6],
+    }
+
+
+@router.post("/projects/{project_id}/advise")
+def advise_project_direction(
+    project_id: str,
+    payload: ProjectAdvisorRequest,
+    user_id: str = Depends(get_current_user_id),
+) -> dict:
+    """Generate writing directions, innovation angles, and scores for a project.
+
+    Reads the project metadata and all papers across its attached collections,
+    combines them with the notes the student has filled in for the framework
+    sections (sent from the client), and returns an actionable AI read-out.
+    """
+    _enforce_ai_guardrails(user_id)
+
+    project = get_project_for_user(project_id, user_id)
+    if not project:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found.")
+
+    collections = list_collections_for_project(project_id, user_id)
+    seen: set[str] = set()
+    papers: list[dict] = []
+    for collection in collections:
+        collection_id = str(collection.get("id") or "").strip()
+        if not collection_id:
+            continue
+        for paper in list_papers_in_collection(collection_id):
+            paper_id = str(paper.get("id") or "").strip()
+            if not paper_id or paper_id in seen:
+                continue
+            seen.add(paper_id)
+            papers.append(paper)
+
+    cleaned_notes = {
+        str(section).strip(): str(content or "").strip()
+        for section, content in (payload.notes or {}).items()
+        if str(section).strip()
+    }
+
+    prompt = project_advisor_prompt(
+        project_title=str(project.get("title") or ""),
+        project_description=str(project.get("description") or ""),
+        framework_type=str(project.get("framework_type") or ""),
+        project_goal=str(project.get("goal") or ""),
+        notes=cleaned_notes,
+        papers=papers,
+    )
+
+    raw = generate_json(prompt, temperature=0.5)
+    normalized = _normalize_advisor_payload(raw)
+
+    filled_notes = sum(1 for value in cleaned_notes.values() if value)
+    normalized["context"] = {
+        "project_id": project_id,
+        "framework_type": project.get("framework_type"),
+        "paper_count": len(papers),
+        "note_section_count": len(cleaned_notes),
+        "filled_note_count": filled_notes,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    return normalized

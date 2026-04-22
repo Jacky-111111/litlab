@@ -41,6 +41,39 @@
         </article>
       </section>
 
+      <section class="panel" id="advisor-panel">
+        <div class="card-head">
+          <div>
+            <h2>AI Direction Advisor</h2>
+            <p class="muted advisor-subtitle">
+              Combines your framework notes and saved papers to suggest writing
+              directions, innovation angles, and a quick project health check.
+            </p>
+          </div>
+          <button id="advisor-run-btn" type="button">Generate suggestions</button>
+        </div>
+        <p id="advisor-message" class="message info" hidden></p>
+        <div id="advisor-body" hidden>
+          <p id="advisor-meta" class="muted advisor-meta"></p>
+          <p id="advisor-summary" class="advisor-summary"></p>
+
+          <h3 class="advisor-heading">Project scores</h3>
+          <div id="advisor-scores" class="advisor-scores"></div>
+
+          <h3 class="advisor-heading">Suggested writing directions</h3>
+          <div id="advisor-directions" class="advisor-cards"></div>
+
+          <h3 class="advisor-heading">Innovation angles to explore</h3>
+          <div id="advisor-innovations" class="advisor-cards"></div>
+
+          <h3 class="advisor-heading">Risks to watch</h3>
+          <ul id="advisor-risks" class="advisor-risks"></ul>
+
+          <h3 class="advisor-heading">Recommended next steps</h3>
+          <ol id="advisor-next-steps" class="advisor-next-steps"></ol>
+        </div>
+      </section>
+
       <section class="panel">
         <h2>Reading Lists</h2>
         <p class="muted">
@@ -86,38 +119,6 @@
         </div>
       </section>
 
-      <section class="two-col">
-        <article class="panel">
-          <h2>Search Papers</h2>
-          <form id="search-form">
-            <label>
-              Keyword query
-              <input type="text" name="query" placeholder="e.g., machine learning fairness education" />
-            </label>
-            <button type="submit">Search</button>
-          </form>
-          <button id="batch-save-search-btn" type="button" class="secondary">Add checked results to this project's primary reading list</button>
-          <div id="search-results" class="stack"></div>
-        </article>
-
-        <article class="panel">
-          <h2>AI Paper Analysis</h2>
-          <p class="muted">Select a saved paper, then run an action.</p>
-          <div class="inline-actions">
-            <button id="btn-summarize" type="button">Summarize</button>
-            <button id="btn-explain" type="button" class="secondary">Explain for Beginner</button>
-            <button id="btn-quiz" type="button" class="secondary">Generate Quiz</button>
-            <button id="btn-recommend" type="button" class="secondary">Related Papers</button>
-          </div>
-          <label>
-            Global note for selected paper
-            <textarea id="selected-paper-note" rows="4" placeholder="This note is shared across all collections for this paper."></textarea>
-          </label>
-          <button id="save-selected-paper-note" type="button" class="secondary">Save Paper Note</button>
-          <pre id="ai-output" class="ai-output"></pre>
-          <div id="related-papers" class="stack"></div>
-        </article>
-      </section>
     </main>
   </body>
 </html>

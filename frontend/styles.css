@@ -1366,3 +1366,159 @@ pre.ai-output {
     width: 100%;
   }
 }
+
+/* --------------------------------------------------------------------- */
+/* Project AI Direction Advisor                                           */
+/* --------------------------------------------------------------------- */
+
+#advisor-panel .card-head {
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+#advisor-panel .advisor-subtitle {
+  margin: 0.25rem 0 0;
+  max-width: 640px;
+}
+
+#advisor-run-btn[disabled] {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.advisor-meta {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+}
+
+.advisor-summary {
+  margin: 0 0 1.25rem;
+  line-height: 1.55;
+}
+
+.advisor-heading {
+  margin: 1.25rem 0 0.5rem;
+  font-size: 1rem;
+}
+
+.advisor-scores {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.advisor-score {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.75rem 0.85rem;
+  background: var(--surface-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.advisor-score-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.advisor-score-label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.advisor-score-value {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.advisor-score-max {
+  font-weight: 500;
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-left: 0.1rem;
+}
+
+.advisor-score-bar {
+  position: relative;
+  height: 6px;
+  background: var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.advisor-score-bar span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--primary);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.advisor-score-weak .advisor-score-bar span {
+  background: var(--danger);
+}
+
+.advisor-score-okay .advisor-score-bar span {
+  background: #d99b21;
+}
+
+.advisor-score-strong .advisor-score-bar span {
+  background: #1e9e57;
+}
+
+.advisor-score-rationale {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.advisor-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.advisor-card {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--primary);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  background: var(--surface-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.advisor-card h4 {
+  margin: 0;
+  font-size: 0.98rem;
+}
+
+.advisor-card p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.advisor-card-footer {
+  font-size: 0.8rem;
+  font-style: italic;
+  margin-top: 0.25rem !important;
+}
+
+.advisor-risks,
+.advisor-next-steps {
+  margin: 0 0 0.5rem;
+  padding-left: 1.2rem;
+  line-height: 1.55;
+}
+
+.advisor-risks li,
+.advisor-next-steps li {
+  margin-bottom: 0.35rem;
+}

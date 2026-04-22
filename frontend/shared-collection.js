@@ -107,7 +107,7 @@ function showDenied({ title, body, actionsHtml }) {
 }
 
 function paperRowTemplate(paper) {
-  const title = paper.title || "Untitled paper";
+  const displayName = (paper.nickname || paper.title || "Untitled paper").trim();
   const authors = Array.isArray(paper.authors) && paper.authors.length
     ? paper.authors.join(", ")
     : "Unknown author";
@@ -121,7 +121,7 @@ function paperRowTemplate(paper) {
     : "";
   return `
     <article class="card shared-paper-card">
-      <h3>${escapeHtml(title)}</h3>
+      <h3>${escapeHtml(displayName)}</h3>
       <p class="muted">${escapeHtml(authors)}${escapeHtml(year)}${escapeHtml(source)}</p>
       ${abstract}
       ${urlLink ? `<div class="inline-actions">${urlLink}</div>` : ""}
