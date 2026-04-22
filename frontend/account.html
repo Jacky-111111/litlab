@@ -25,14 +25,20 @@
         <p id="account-message" class="message info">Loading account information...</p>
 
         <form id="account-form">
-          <label>
-            Bound Email
-            <input id="account-email" type="email" readonly />
+          <label class="account-readonly-field">
+            <span class="account-field-label">
+              Bound Email
+              <span class="account-field-hint">Cannot be changed</span>
+            </span>
+            <input id="account-email" type="email" readonly aria-readonly="true" tabindex="-1" />
           </label>
 
-          <label>
-            User ID
-            <input id="account-user-id" type="text" readonly />
+          <label class="account-readonly-field">
+            <span class="account-field-label">
+              User ID
+              <span class="account-field-hint">Cannot be changed</span>
+            </span>
+            <input id="account-user-id" type="text" readonly aria-readonly="true" tabindex="-1" />
           </label>
 
           <label>

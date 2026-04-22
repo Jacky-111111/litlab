@@ -32,6 +32,25 @@
         <p id="read-papers-message" class="message info">Ready to analyze a paper.</p>
       </section>
 
+      <section class="panel" id="public-search-panel">
+        <h2>Discover Public Papers</h2>
+        <p class="muted">
+          Search public papers (via Semantic Scholar), preview basic info, then pick one to fill the URL
+          slot below. PDF extraction still requires a direct PDF upload.
+        </p>
+        <div class="public-search-row">
+          <input
+            id="public-search-input"
+            type="search"
+            placeholder="Search by keywords, e.g. large language model agents"
+            autocomplete="off"
+          />
+          <button id="public-search-btn" type="button">Search</button>
+        </div>
+        <p id="public-search-status" class="muted">Try a keyword to see public paper matches.</p>
+        <div id="public-search-results" class="stack public-search-results"></div>
+      </section>
+
       <section class="read-papers-workspace">
         <div class="read-papers-controls stack">
           <section class="panel">

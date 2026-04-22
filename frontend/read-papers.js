@@ -699,6 +699,156 @@ savedSourceInfoEl.addEventListener("click", async (event) => {
   }
 });
 
+const publicSearchInputEl = document.getElementById("public-search-input");
+const publicSearchBtn = document.getElementById("public-search-btn");
+const publicSearchStatusEl = document.getElementById("public-search-status");
+const publicSearchResultsEl = document.getElementById("public-search-results");
+let publicSearchSelectedId = "";
+
+function setPublicSearchStatus(text, tone = "muted") {
+  publicSearchStatusEl.textContent = text;
+  publicSearchStatusEl.className = tone === "error" ? "message error" : "muted";
+}
+
+function escapeHtml(text) {
+  return String(text || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function publicResultCardTemplate(paper, index) {
+  const authors = (paper.authors || []).join(", ") || "Unknown author";
+  const abstract = paper.abstract || "No abstract available.";
+  const snippet = abstract.length > 260 ? `${abstract.slice(0, 260)}...` : abstract;
+  const displayTitle = paper.title || "Untitled paper";
+  const year = paper.year ? ` · ${paper.year}` : "";
+  const source = paper.source || "Semantic Scholar";
+  const resultKey = String(paper.external_paper_id || paper.url || `idx-${index}`);
+  const hasUrl = Boolean(paper.url);
+  return `
+    <article class="card paper-card" data-result-key="${escapeHtml(resultKey)}">
+      <h4>${escapeHtml(displayTitle)}</h4>
+      <p class="muted">${escapeHtml(authors)}${escapeHtml(year)} · ${escapeHtml(source)}</p>
+      <p>${escapeHtml(snippet)}</p>
+      <div class="paper-actions">
+        <button
+          type="button"
+          data-action="use-url"
+          data-url="${escapeHtml(paper.url || "")}"
+          data-title="${escapeHtml(displayTitle)}"
+          ${hasUrl ? "" : "disabled"}
+        >Use this URL</button>
+        ${
+          hasUrl
+            ? `<a class="secondary button" href="${escapeHtml(paper.url)}" target="_blank" rel="noopener noreferrer">Open</a>`
+            : ""
+        }
+      </div>
+    </article>
+  `;
+}
+
+function highlightSelectedPublicResult() {
+  const cards = publicSearchResultsEl.querySelectorAll(".paper-card");
+  cards.forEach((card) => {
+    const key = card.getAttribute("data-result-key") || "";
+    if (publicSearchSelectedId && key === publicSearchSelectedId) {
+      card.classList.add("is-selected");
+    } else {
+      card.classList.remove("is-selected");
+    }
+  });
+}
+
+async function runPublicPaperSearch() {
+  const query = String(publicSearchInputEl.value || "").trim();
+  if (!query) {
+    setPublicSearchStatus("Enter a keyword to search public papers.", "error");
+    return;
+  }
+  setPublicSearchStatus(`Searching public papers for "${query}"...`);
+  publicSearchResultsEl.innerHTML = "";
+  publicSearchBtn.disabled = true;
+  try {
+    const response = await window.LitLab.apiFetch(
+      `/papers/search?q=${encodeURIComponent(query)}`
+    );
+    const papers = (response && response.papers) || [];
+    if (!papers.length) {
+      publicSearchResultsEl.innerHTML = "";
+      setPublicSearchStatus(`No public papers found for "${query}".`);
+      return;
+    }
+    publicSearchResultsEl.innerHTML = papers
+      .map((paper, index) => publicResultCardTemplate(paper, index))
+      .join("");
+    highlightSelectedPublicResult();
+    setPublicSearchStatus(
+      `Showing ${papers.length} public paper${papers.length === 1 ? "" : "s"} for "${query}". Click "Use this URL" to fill the source field below.`
+    );
+  } catch (error) {
+    publicSearchResultsEl.innerHTML = "";
+    const rawMessage = String(error && error.message ? error.message : "");
+    const isRateLimited =
+      (error && error.status === 429) ||
+      /429|rate[- ]?limit|too many requests/i.test(rawMessage);
+    let friendly;
+    if (isRateLimited) {
+      friendly =
+        "Semantic Scholar is rate-limiting public searches right now. Please wait ~10 seconds and try again.";
+    } else if (rawMessage) {
+      // Trim overly long upstream URLs so the error box stays readable.
+      friendly = rawMessage.length > 200 ? `${rawMessage.slice(0, 200)}...` : rawMessage;
+    } else {
+      friendly = "Public paper search failed.";
+    }
+    setPublicSearchStatus(friendly, "error");
+  } finally {
+    publicSearchBtn.disabled = false;
+  }
+}
+
+publicSearchBtn.addEventListener("click", () => {
+  runPublicPaperSearch();
+});
+
+publicSearchInputEl.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    runPublicPaperSearch();
+  }
+});
+
+publicSearchResultsEl.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLButtonElement)) return;
+  if (target.dataset.action !== "use-url") return;
+  const url = String(target.dataset.url || "").trim();
+  const title = String(target.dataset.title || "").trim();
+  if (!url) {
+    setPublicSearchStatus("This result has no public URL.", "error");
+    return;
+  }
+  paperUrlInputEl.value = url;
+  const card = target.closest(".paper-card");
+  publicSearchSelectedId = card ? card.getAttribute("data-result-key") || "" : "";
+  highlightSelectedPublicResult();
+  setMessage(
+    `URL loaded${title ? `: ${title}` : ""}. Click "Start Analyze" below to add it to your library.`,
+    "success"
+  );
+  setPublicSearchStatus(
+    `Selected "${title || url}". The URL is filled in the Paper Source field below.`
+  );
+  if (typeof paperUrlInputEl.scrollIntoView === "function") {
+    paperUrlInputEl.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+  paperUrlInputEl.focus({ preventScroll: true });
+});
+
 if (presetPaperId) {
   readerModeHintEl.textContent = "Reader mode: opening a paper from your library.";
   backToLibraryBtn.hidden = false;
