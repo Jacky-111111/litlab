@@ -323,7 +323,7 @@ label {
   grid-template-columns: 1fr;
   gap: 1rem;
   width: min(1120px, 92vw);
-  margin: 0 auto;
+  margin: 2rem auto;
 }
 
 .library-dashboard-split {
@@ -602,11 +602,26 @@ label {
   grid-template-columns: 1fr;
   gap: 1rem;
   width: min(1120px, 92vw);
-  margin: 0 auto;
+  margin: 2rem auto;
 }
 
 .project-layout > * {
   width: 100%;
+}
+
+.library-header {
+  margin: 0;
+  padding: 0.25rem 0.25rem 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.library-header h1 {
+  margin: 0;
+}
+
+.library-header p {
+  margin: 0;
 }
 
 .account-layout {
@@ -1063,7 +1078,7 @@ a.mini-card-link .mini-card-cta {
   display: grid;
   gap: 1rem;
   width: min(1120px, 92vw);
-  margin: 0 auto;
+  margin: 2rem auto;
 }
 
 .framework-breadcrumb {
