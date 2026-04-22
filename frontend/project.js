@@ -20,6 +20,10 @@ const libraryPickerSelectAllBtn = document.getElementById("library-picker-select
 const libraryPickerClearBtn = document.getElementById("library-picker-clear");
 const libraryPickerAddBtn = document.getElementById("library-picker-add");
 
+const exportBibMlaBtn = document.getElementById("export-bib-mla");
+const exportBibApaBtn = document.getElementById("export-bib-apa");
+const exportBibChicagoBtn = document.getElementById("export-bib-chicago");
+
 const advisorRunBtn = document.getElementById("advisor-run-btn");
 const advisorMessageEl = document.getElementById("advisor-message");
 const advisorBodyEl = document.getElementById("advisor-body");
@@ -39,6 +43,9 @@ let libraryPickerPapers = [];
 const libraryPickerSelection = new Set();
 const projectPaperIdSet = new Set();
 let allCollectionsCache = [];
+
+let projectTitleText = "Project";
+let projectSavedPapers = [];
 
 function setMessage(text, tone = "info") {
   projectMessageEl.textContent = text;
@@ -83,6 +90,31 @@ function renderGuidance(guidance) {
     .join("");
 }
 
+function updateSavedPapersScrollLayout() {
+  if (!savedPapersEl) return;
+  const apply = () => {
+    const cards = savedPapersEl.querySelectorAll(".paper-card");
+    if (cards.length <= 3) {
+      savedPapersEl.classList.remove("saved-papers--scrollable");
+      savedPapersEl.style.maxHeight = "";
+      return;
+    }
+    let h = 0;
+    for (let i = 0; i < 3; i++) {
+      h += cards[i].getBoundingClientRect().height;
+    }
+    const s = getComputedStyle(savedPapersEl);
+    const gap = parseFloat(s.rowGap) || parseFloat(s.gap) || 16;
+    h += 2 * gap;
+    savedPapersEl.classList.add("saved-papers--scrollable");
+    savedPapersEl.style.maxHeight = `${Math.ceil(h)}px`;
+  };
+  // Measure after layout (double rAF handles paint after innerHTML)
+  requestAnimationFrame(() => {
+    requestAnimationFrame(apply);
+  });
+}
+
 function paperCard(paper) {
   const paperId = paper.id || paper.external_paper_id || "";
   const authors = (paper.authors || []).join(", ") || "Unknown author";
@@ -112,6 +144,7 @@ async function loadProjectDetail() {
   try {
     const response = await window.LitLab.apiFetch(`/projects/${projectId}`);
     const project = response.project;
+    projectTitleText = (project.title || "Project").trim() || "Project";
     projectTitleEl.textContent = project.title;
     projectDescriptionEl.textContent = project.description || "No description provided.";
     renderGuidance(response.framework_guidance);
@@ -125,21 +158,149 @@ async function loadSavedPapers() {
   try {
     const response = await window.LitLab.apiFetch(`/projects/${projectId}/papers`);
     const papers = response.papers || [];
+    projectSavedPapers = papers;
     projectPaperIdSet.clear();
     papers.forEach((paper) => {
       if (paper.id) projectPaperIdSet.add(paper.id);
     });
+    updateBibliographyExportButtons();
     if (!papers.length) {
       savedPapersEl.innerHTML = "<p class='muted'>No saved papers yet.</p>";
       renderLibraryPickerResults();
+      updateSavedPapersScrollLayout();
       return;
     }
     savedPapersEl.innerHTML = papers.map((paper) => paperCard(paper)).join("");
     renderLibraryPickerResults();
+    updateSavedPapersScrollLayout();
+    if (papers.length > 3 && document.fonts?.ready) {
+      document.fonts.ready.then(() => updateSavedPapersScrollLayout());
+    }
   } catch (error) {
+    projectSavedPapers = [];
+    updateBibliographyExportButtons();
     savedPapersEl.innerHTML = `<p class='message error'>${error.message || "Could not load saved papers."}</p>`;
+    updateSavedPapersScrollLayout();
   }
 }
+
+// ---------------------------------------------------------------------------
+// Bibliography export (MLA / APA / Chicago .txt download)
+// ---------------------------------------------------------------------------
+
+const BIBLIOGRAPHY_STYLE_META = {
+  mla: { label: "MLA", heading: "Works Cited" },
+  apa: { label: "APA", heading: "References" },
+  chicago: { label: "Chicago", heading: "Bibliography" },
+};
+
+function updateBibliographyExportButtons() {
+  const disabled = projectSavedPapers.length === 0;
+  [exportBibMlaBtn, exportBibApaBtn, exportBibChicagoBtn].forEach((btn) => {
+    if (btn) btn.disabled = disabled;
+  });
+}
+
+function firstAuthorLastName(paper) {
+  const firstAuthor = (paper?.authors || [])[0];
+  if (!firstAuthor) return "";
+  const parts = String(firstAuthor).trim().split(/\s+/);
+  return (parts[parts.length - 1] || "").toLowerCase();
+}
+
+function sortedPapersForBibliography(papers) {
+  return [...papers].sort((a, b) => {
+    const keyA = firstAuthorLastName(a) || String(a?.title || "").toLowerCase();
+    const keyB = firstAuthorLastName(b) || String(b?.title || "").toLowerCase();
+    if (keyA === keyB) return 0;
+    if (!keyA) return 1;
+    if (!keyB) return -1;
+    return keyA < keyB ? -1 : 1;
+  });
+}
+
+function citationFor(paper, style) {
+  const fromDict = paper?.citations?.[style];
+  if (typeof fromDict === "string" && fromDict.trim()) return fromDict.trim();
+  const flat = paper?.[`citation_${style}`];
+  if (typeof flat === "string" && flat.trim()) return flat.trim();
+  return "";
+}
+
+function buildBibliographyText(style) {
+  const meta = BIBLIOGRAPHY_STYLE_META[style];
+  const sorted = sortedPapersForBibliography(projectSavedPapers);
+  const entries = [];
+  const skipped = [];
+  sorted.forEach((paper) => {
+    const line = citationFor(paper, style);
+    if (line) {
+      entries.push(line);
+    } else {
+      skipped.push(paper?.title || paper?.nickname || "Untitled paper");
+    }
+  });
+
+  const now = new Date();
+  const generatedOn = now.toISOString().slice(0, 10);
+  const header = [
+    projectTitleText,
+    `${meta.heading} (${meta.label})`,
+    `Generated ${generatedOn} by LitLab · ${entries.length} source${entries.length === 1 ? "" : "s"}`,
+  ];
+  const divider = "=".repeat(Math.min(72, Math.max(header[0].length, header[1].length, 24)));
+
+  const parts = [header[0], divider, header[1], header[2], ""];
+  if (entries.length === 0) {
+    parts.push("(No citations available for the saved papers.)");
+  } else {
+    parts.push(...entries.flatMap((line) => [line, ""]));
+  }
+  if (skipped.length) {
+    parts.push("");
+    parts.push(`Note: ${skipped.length} paper(s) had no citation data and were omitted:`);
+    skipped.forEach((title) => parts.push(`  - ${title}`));
+  }
+  return `${parts.join("\n").trimEnd()}\n`;
+}
+
+function sanitizeFilename(value) {
+  return String(value || "project")
+    .trim()
+    .replace(/[^a-zA-Z0-9-_]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 60) || "project";
+}
+
+function downloadTextFile(filename, text) {
+  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+function exportBibliography(style) {
+  if (!BIBLIOGRAPHY_STYLE_META[style]) return;
+  if (!projectSavedPapers.length) {
+    setMessage("No saved papers yet — nothing to export.", "warning");
+    return;
+  }
+  const text = buildBibliographyText(style);
+  const base = sanitizeFilename(projectTitleText);
+  downloadTextFile(`${base}-bibliography-${style}.txt`, text);
+  const label = BIBLIOGRAPHY_STYLE_META[style].label;
+  setMessage(`Downloaded ${label} bibliography for this project.`, "success");
+}
+
+exportBibMlaBtn?.addEventListener("click", () => exportBibliography("mla"));
+exportBibApaBtn?.addEventListener("click", () => exportBibliography("apa"));
+exportBibChicagoBtn?.addEventListener("click", () => exportBibliography("chicago"));
 
 function renderReadingLists() {
   if (!readingListsEl) return;
@@ -580,10 +741,14 @@ async function runAdvisor() {
   const notes = collectFrameworkNotes();
 
   setAdvisorMessage("Reading your notes and papers, then drafting suggestions...");
+  const advisorBtnLabel = advisorRunBtn?.querySelector("span") || advisorRunBtn;
   if (advisorRunBtn) {
     advisorRunBtn.disabled = true;
-    advisorRunBtn.dataset.originalText = advisorRunBtn.dataset.originalText || advisorRunBtn.textContent;
-    advisorRunBtn.textContent = "Generating...";
+    if (advisorBtnLabel) {
+      advisorBtnLabel.dataset.originalText =
+        advisorBtnLabel.dataset.originalText || advisorBtnLabel.textContent;
+      advisorBtnLabel.textContent = "Generating...";
+    }
   }
 
   try {
@@ -598,13 +763,23 @@ async function runAdvisor() {
   } finally {
     if (advisorRunBtn) {
       advisorRunBtn.disabled = false;
-      advisorRunBtn.textContent =
-        advisorRunBtn.dataset.originalText || "Generate suggestions";
+      if (advisorBtnLabel) {
+        advisorBtnLabel.textContent =
+          advisorBtnLabel.dataset.originalText || "Generate suggestions";
+      }
     }
   }
 }
 
 advisorRunBtn?.addEventListener("click", runAdvisor);
+
+let savedPapersLayoutResizeTimer;
+window.addEventListener("resize", () => {
+  clearTimeout(savedPapersLayoutResizeTimer);
+  savedPapersLayoutResizeTimer = setTimeout(() => {
+    updateSavedPapersScrollLayout();
+  }, 150);
+});
 
 loadProjectDetail();
 loadAttachedCollections();

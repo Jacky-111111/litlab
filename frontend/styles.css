@@ -310,6 +310,17 @@ label {
   gap: 1rem;
 }
 
+/* Project workspace: cap Saved Papers to ~3 cards when there are more; scroll the rest */
+#saved-papers.saved-papers--scrollable {
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding-right: 0.1rem; /* small buffer beside scrollbar */
+}
+
 .dashboard-layout {
   display: grid;
   gap: 1rem;
@@ -886,6 +897,20 @@ label {
   margin-top: 0.8rem;
 }
 
+.bibliography-actions {
+  align-items: center;
+  margin-bottom: 1.1rem;
+}
+
+.bibliography-actions > span {
+  margin-right: 0.15rem;
+}
+
+.bibliography-actions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .paper-card {
   position: relative;
 }
@@ -1455,8 +1480,8 @@ pre.ai-output {
 /* --------------------------------------------------------------------- */
 
 #advisor-panel .card-head {
-  align-items: flex-start;
-  gap: 1rem;
+  align-items: center;
+  gap: 1.25rem;
 }
 
 #advisor-panel .advisor-subtitle {
@@ -1464,9 +1489,60 @@ pre.ai-output {
   max-width: 640px;
 }
 
+.advisor-cta {
+  font-size: 1.05rem;
+  font-weight: 700;
+  padding: 0.85rem 1.5rem;
+  border-radius: 12px;
+  gap: 0.55rem;
+  letter-spacing: 0.01em;
+  background: linear-gradient(135deg, var(--primary) 0%, #7b3ff2 100%);
+  border-color: transparent;
+  box-shadow: 0 6px 18px rgba(33, 88, 217, 0.28), 0 1px 2px rgba(0, 0, 0, 0.06);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.advisor-cta:hover {
+  background: linear-gradient(135deg, #1c4cc0 0%, #6a2ee0 100%);
+  box-shadow: 0 10px 24px rgba(33, 88, 217, 0.35), 0 2px 4px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+  filter: brightness(1.03);
+}
+
+.advisor-cta:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 12px rgba(33, 88, 217, 0.28);
+}
+
+.advisor-cta:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--primary-soft), 0 6px 18px rgba(33, 88, 217, 0.28);
+}
+
+.advisor-cta-icon {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.15));
+}
+
 #advisor-run-btn[disabled] {
   opacity: 0.7;
   cursor: progress;
+  transform: none;
+}
+
+@media (max-width: 640px) {
+  #advisor-panel .card-head {
+    align-items: flex-start;
+  }
+
+  .advisor-cta {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 .advisor-meta {

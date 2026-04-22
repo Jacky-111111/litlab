@@ -37,6 +37,12 @@
         <article class="panel">
           <h2>Saved Papers</h2>
           <p class="muted">All papers from every reading list attached to this project.</p>
+          <div class="inline-actions bibliography-actions">
+            <span class="muted">Export bibliography as .txt:</span>
+            <button id="export-bib-mla" type="button" class="secondary" disabled>MLA</button>
+            <button id="export-bib-apa" type="button" class="secondary" disabled>APA</button>
+            <button id="export-bib-chicago" type="button" class="secondary" disabled>Chicago</button>
+          </div>
           <div id="saved-papers" class="stack"></div>
         </article>
       </section>
@@ -50,7 +56,12 @@
               directions, innovation angles, and a quick project health check.
             </p>
           </div>
-          <button id="advisor-run-btn" type="button">Generate suggestions</button>
+          <button id="advisor-run-btn" type="button" class="advisor-cta">
+            <svg class="advisor-cta-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M12 2.5l1.8 4.7 4.7 1.8-4.7 1.8L12 15.5l-1.8-4.7L5.5 9l4.7-1.8L12 2.5zm6.5 10l.9 2.3 2.3.9-2.3.9-.9 2.3-.9-2.3-2.3-.9 2.3-.9.9-2.3zM5.5 14l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8L3 16.5l1.8-.7L5.5 14z" fill="currentColor"/>
+            </svg>
+            <span>Generate suggestions</span>
+          </button>
         </div>
         <p id="advisor-message" class="message info" hidden></p>
         <div id="advisor-body" hidden>
