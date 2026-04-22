@@ -141,7 +141,7 @@ Copy `.env.example` to `.env` and fill values:
 ```bash
 python3 -m venv backend/.venv
 source backend/.venv/bin/activate
-pip install -r backend/requirements.txt
+pip install -r requirements.txt
 ./backend/run_dev.sh
 ```
 
