@@ -4,34 +4,19 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
-try:
-    from ..services.supabase_service import (
-        attach_collection_to_project,
-        create_project_with_primary_collection,
-        delete_project_for_user,
-        detach_collection_from_project,
-        get_current_user_id,
-        get_primary_collection_for_project,
-        get_project_for_user,
-        list_collections_for_project,
-        list_projects_for_user,
-        update_project_for_user,
-    )
-    from ..utils.framework_guidance import get_framework_guidance
-except ImportError:
-    from services.supabase_service import (
-        attach_collection_to_project,
-        create_project_with_primary_collection,
-        delete_project_for_user,
-        detach_collection_from_project,
-        get_current_user_id,
-        get_primary_collection_for_project,
-        get_project_for_user,
-        list_collections_for_project,
-        list_projects_for_user,
-        update_project_for_user,
-    )
-    from utils.framework_guidance import get_framework_guidance
+from ..services.supabase_service import (
+    attach_collection_to_project,
+    create_project_with_primary_collection,
+    delete_project_for_user,
+    detach_collection_from_project,
+    get_current_user_id,
+    get_primary_collection_for_project,
+    get_project_for_user,
+    list_collections_for_project,
+    list_projects_for_user,
+    update_project_for_user,
+)
+from ..utils.framework_guidance import get_framework_guidance
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 

@@ -7,7 +7,7 @@ const isPrivateIpv4 =
 const isLocalIpv6 = ["::1", "::", "0:0:0:0:0:0:0:1"].includes(normalizedHostname);
 const isLocalhost = ["localhost", "127.0.0.1", "0.0.0.0"].includes(normalizedHostname) || isLocalIpv6;
 const isLocalLikeHost = isLocalhost || isPrivateIpv4 || normalizedHostname.endsWith(".local");
-const localApiBaseUrl = "http://localhost:5500";
+const localApiBaseUrl = "http://localhost:5500/api";
 
 window.__LITLAB_CONFIG__ = {
   apiBaseUrl: isLocalLikeHost ? localApiBaseUrl : "/api",

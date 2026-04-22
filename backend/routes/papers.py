@@ -4,50 +4,27 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field, HttpUrl
 
-try:
-    from ..services.paper_reader_service import extract_paper_from_url
-    from ..services.paper_search_service import search_papers
-    from ..services.supabase_service import (
-        add_paper_to_collection,
-        create_or_update_paper_for_user,
-        create_signed_pdf_url,
-        delete_paper_for_user,
-        get_current_user_id,
-        get_or_update_paper_note,
-        get_paper_for_user,
-        get_primary_collection_for_project,
-        get_project_for_user,
-        list_collection_ids_for_paper,
-        list_collections_for_project,
-        list_papers_for_user,
-        list_papers_in_collection,
-        save_paper_to_collection,
-        upload_pdf_for_user,
-        update_paper_nickname_for_user,
-        update_paper_url_for_user,
-    )
-except ImportError:
-    from services.paper_reader_service import extract_paper_from_url
-    from services.paper_search_service import search_papers
-    from services.supabase_service import (
-        add_paper_to_collection,
-        create_or_update_paper_for_user,
-        create_signed_pdf_url,
-        delete_paper_for_user,
-        get_current_user_id,
-        get_or_update_paper_note,
-        get_paper_for_user,
-        get_primary_collection_for_project,
-        get_project_for_user,
-        list_collection_ids_for_paper,
-        list_collections_for_project,
-        list_papers_for_user,
-        list_papers_in_collection,
-        save_paper_to_collection,
-        upload_pdf_for_user,
-        update_paper_nickname_for_user,
-        update_paper_url_for_user,
-    )
+from ..services.paper_reader_service import extract_paper_from_url
+from ..services.paper_search_service import search_papers
+from ..services.supabase_service import (
+    add_paper_to_collection,
+    create_or_update_paper_for_user,
+    create_signed_pdf_url,
+    delete_paper_for_user,
+    get_current_user_id,
+    get_or_update_paper_note,
+    get_paper_for_user,
+    get_primary_collection_for_project,
+    get_project_for_user,
+    list_collection_ids_for_paper,
+    list_collections_for_project,
+    list_papers_for_user,
+    list_papers_in_collection,
+    save_paper_to_collection,
+    upload_pdf_for_user,
+    update_paper_nickname_for_user,
+    update_paper_url_for_user,
+)
 
 router = APIRouter(tags=["papers"])
 

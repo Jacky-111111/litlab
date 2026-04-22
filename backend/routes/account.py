@@ -3,18 +3,11 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
-try:
-    from ..services.supabase_service import (
-        get_current_user,
-        get_user_profile,
-        upsert_user_profile,
-    )
-except ImportError:
-    from services.supabase_service import (
-        get_current_user,
-        get_user_profile,
-        upsert_user_profile,
-    )
+from ..services.supabase_service import (
+    get_current_user,
+    get_user_profile,
+    upsert_user_profile,
+)
 
 router = APIRouter(prefix="/account", tags=["account"])
 

@@ -3,38 +3,21 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
-try:
-    from ..services.supabase_service import (
-        batch_add_papers_to_collection,
-        batch_remove_papers_from_collection,
-        create_collection_for_user,
-        delete_collection_for_user,
-        generate_unique_share_slug,
-        get_collection_for_user,
-        get_current_user_id,
-        list_collections_for_user,
-        list_papers_in_collection,
-        list_shared_emails,
-        replace_shared_emails,
-        set_collection_share_slug,
-        update_collection_for_user,
-    )
-except ImportError:
-    from services.supabase_service import (
-        batch_add_papers_to_collection,
-        batch_remove_papers_from_collection,
-        create_collection_for_user,
-        delete_collection_for_user,
-        generate_unique_share_slug,
-        get_collection_for_user,
-        get_current_user_id,
-        list_collections_for_user,
-        list_papers_in_collection,
-        list_shared_emails,
-        replace_shared_emails,
-        set_collection_share_slug,
-        update_collection_for_user,
-    )
+from ..services.supabase_service import (
+    batch_add_papers_to_collection,
+    batch_remove_papers_from_collection,
+    create_collection_for_user,
+    delete_collection_for_user,
+    generate_unique_share_slug,
+    get_collection_for_user,
+    get_current_user_id,
+    list_collections_for_user,
+    list_papers_in_collection,
+    list_shared_emails,
+    replace_shared_emails,
+    set_collection_share_slug,
+    update_collection_for_user,
+)
 
 router = APIRouter(prefix="/collections", tags=["collections"])
 

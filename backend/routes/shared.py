@@ -5,28 +5,16 @@ from urllib.parse import urlparse
 import qrcode
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
-try:
-    from ..services.supabase_service import (
-        get_collection_by_slug,
-        get_collection_for_user,
-        get_current_user_id,
-        get_optional_user,
-        get_sharer_public_profile,
-        list_papers_in_collection,
-        list_shared_emails,
-        mark_invited_user_id,
-    )
-except ImportError:
-    from services.supabase_service import (
-        get_collection_by_slug,
-        get_collection_for_user,
-        get_current_user_id,
-        get_optional_user,
-        get_sharer_public_profile,
-        list_papers_in_collection,
-        list_shared_emails,
-        mark_invited_user_id,
-    )
+from ..services.supabase_service import (
+    get_collection_by_slug,
+    get_collection_for_user,
+    get_current_user_id,
+    get_optional_user,
+    get_sharer_public_profile,
+    list_papers_in_collection,
+    list_shared_emails,
+    mark_invited_user_id,
+)
 
 
 router = APIRouter(prefix="/shared", tags=["shared"])

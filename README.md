@@ -139,21 +139,24 @@ Copy `.env.example` to `.env` and fill values:
 ### 1) Backend
 
 ```bash
-cd backend
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-./run_dev.sh
+python3 -m venv backend/.venv
+source backend/.venv/bin/activate
+pip install -r backend/requirements.txt
+./backend/run_dev.sh
 ```
 
-The default local backend URL is:
+The local API is served under the `/api` prefix (same shape as the
+Vercel deployment), so the default local backend URL is:
 
-- `http://127.0.0.1:5500`
+- `http://127.0.0.1:5500/api`
 
-If you prefer not to use the script, run:
+Health check: `http://127.0.0.1:5500/api/health`.
+
+If you prefer not to use the script, run from the project root:
 
 ```bash
-uvicorn main:app --reload --host 127.0.0.1 --port 5500 --reload-dir . --reload-exclude ".venv/*" --reload-exclude "**/.venv/*"
+uvicorn backend.main:app --reload --host 127.0.0.1 --port 5500 \
+  --reload-dir backend --reload-exclude "**/.venv/*" --reload-exclude "**/__pycache__/*"
 ```
 
 ### 2) Frontend
@@ -163,11 +166,14 @@ For local development, make sure the frontend targets backend `5500`:
 
 ```js
 window.__LITLAB_CONFIG__ = {
-  apiBaseUrl: "http://localhost:5500",
+  apiBaseUrl: "http://localhost:5500/api",
   supabaseUrl: "https://your-project.supabase.co",
   supabaseAnonKey: "your_supabase_anon_key",
 };
 ```
+
+`frontend/config.js` already picks this up automatically on localhost; the
+snippet above is only for manual overrides.
 
 Serve `frontend/` with any static server (example with Python):
 

@@ -10,51 +10,30 @@ from time import time
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, HttpUrl
 
-try:
-    from ..prompts.paper_prompts import (
-        explain_prompt,
-        quiz_prompt,
-        read_paper_analysis_prompt,
-        summary_prompt,
-    )
-    from ..prompts.project_prompts import project_advisor_prompt
-    from ..services.openai_service import generate_json, generate_text
-    from ..services.paper_reader_service import extract_paper_from_pdf_bytes, extract_paper_from_url
-    from ..services.paper_search_service import search_author_profiles, search_papers
-    from ..services.supabase_service import (
-        add_paper_to_collection,
-        count_daily_ai_writes,
-        create_or_update_paper_for_user,
-        download_pdf_from_storage,
-        get_current_user_id,
-        get_paper_ai_cache,
-        get_paper_for_user,
-        get_project_for_user,
-        list_collections_for_project,
-        list_papers_in_collection,
-        upsert_paper_ai_cache,
-        upload_pdf_for_user,
-    )
-except ImportError:
-    from prompts.paper_prompts import explain_prompt, quiz_prompt, read_paper_analysis_prompt, summary_prompt
-    from prompts.project_prompts import project_advisor_prompt
-    from services.openai_service import generate_json, generate_text
-    from services.paper_reader_service import extract_paper_from_pdf_bytes, extract_paper_from_url
-    from services.paper_search_service import search_author_profiles, search_papers
-    from services.supabase_service import (
-        add_paper_to_collection,
-        count_daily_ai_writes,
-        create_or_update_paper_for_user,
-        download_pdf_from_storage,
-        get_current_user_id,
-        get_paper_ai_cache,
-        get_paper_for_user,
-        get_project_for_user,
-        list_collections_for_project,
-        list_papers_in_collection,
-        upsert_paper_ai_cache,
-        upload_pdf_for_user,
-    )
+from ..prompts.paper_prompts import (
+    explain_prompt,
+    quiz_prompt,
+    read_paper_analysis_prompt,
+    summary_prompt,
+)
+from ..prompts.project_prompts import project_advisor_prompt
+from ..services.openai_service import generate_json, generate_text
+from ..services.paper_reader_service import extract_paper_from_pdf_bytes, extract_paper_from_url
+from ..services.paper_search_service import search_author_profiles, search_papers
+from ..services.supabase_service import (
+    add_paper_to_collection,
+    count_daily_ai_writes,
+    create_or_update_paper_for_user,
+    download_pdf_from_storage,
+    get_current_user_id,
+    get_paper_ai_cache,
+    get_paper_for_user,
+    get_project_for_user,
+    list_collections_for_project,
+    list_papers_in_collection,
+    upsert_paper_ai_cache,
+    upload_pdf_for_user,
+)
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 _rate_lock = Lock()
