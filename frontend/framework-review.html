@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LitLab | Review / Survey Framework Guide</title>
+    <link rel="icon" type="image/png" href="https://img.icons8.com/?size=100&id=aOIjONBdomrC&format=png&color=000000" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="config.js"></script>
+    <script defer src="app.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="container">
+        <a class="brand" href="dashboard.html">LitLab</a>
+        <a class="button secondary" href="dashboard.html">Back to Dashboard</a>
+      </div>
+    </header>
+
+    <main class="container section framework-guide-layout">
+      <nav class="framework-breadcrumb muted">
+        <a href="dashboard.html">Dashboard</a>
+        <span>›</span>
+        <span>Framework Quick Guide</span>
+        <span>›</span>
+        <strong>Review / Survey</strong>
+      </nav>
+
+      <section class="panel framework-hero">
+        <span class="badge teal">Review / Survey</span>
+        <h1>Write a Review or Survey paper</h1>
+        <p class="muted">
+          A Review paper maps what research already exists on a topic,
+          synthesizes it, and shows where the gaps are. You are a
+          cartographer of the field, not an experimenter.
+        </p>
+        <div class="framework-hero-stats">
+          <div>
+            <p class="muted">When to use</p>
+            <p>You want to understand a field before running new work.</p>
+          </div>
+          <div>
+            <p class="muted">Typical length</p>
+            <p>4,000 – 10,000 words</p>
+          </div>
+          <div>
+            <p class="muted">Key move</p>
+            <p>Organize other people's findings into a clear story.</p>
+          </div>
+        </div>
+        <div class="inline-actions">
+          <a class="button" href="projects.html?framework=Review%20%2F%20Survey#create">
+            Create a project with Review / Survey
+          </a>
+          <a class="button secondary" href="library.html">Browse my library</a>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>The big idea</h2>
+        <p>
+          A good review does three things: <strong>collects</strong> the
+          relevant papers, <strong>organizes</strong> them into meaningful
+          categories, and <strong>synthesizes</strong> patterns across
+          them. A bad review is just a list of summaries. Your job is to
+          argue that the field looks a certain way and show the evidence.
+        </p>
+      </section>
+
+      <section class="panel">
+        <h2>Section-by-section walkthrough</h2>
+        <ol class="framework-sections">
+          <li class="framework-section">
+            <div class="framework-step-index">1</div>
+            <div>
+              <h3>Background &amp; Scope</h3>
+              <p class="framework-section-goal">
+                <strong>Goal:</strong> Set the topic, define terms, and
+                draw the boundary of what you will (and will not) cover.
+              </p>
+              <p><strong>What to include</strong></p>
+              <ul>
+                <li>Why the topic matters now.</li>
+                <li>Definitions of your core concepts.</li>
+                <li>The exact question(s) your review answers.</li>
+                <li>Time range, disciplines, languages, or venues included.</li>
+              </ul>
+              <p class="muted">
+                Writing tip: a reader should be able to predict which
+                papers would be in scope and which would not after reading
+                this section.
+              </p>
+            </div>
+          </li>
+
+          <li class="framework-section">
+            <div class="framework-step-index">2</div>
+            <div>
+              <h3>Search Method</h3>
+              <p class="framework-section-goal">
+                <strong>Goal:</strong> Show you did not just pick the
+                papers that agree with you.
+              </p>
+              <p><strong>What to include</strong></p>
+              <ul>
+                <li>Databases used (Google Scholar, ACM, PubMed, etc.).</li>
+                <li>Search terms and boolean queries.</li>
+                <li>Inclusion / exclusion criteria.</li>
+                <li>How many papers you screened vs. kept — a PRISMA-style diagram helps.</li>
+              </ul>
+              <p class="muted">
+                Writing tip: even a small student review benefits from
+                listing your search terms — it turns opinion into method.
+              </p>
+            </div>
+          </li>
+
+          <li class="framework-section">
+            <div class="framework-step-index">3</div>
+            <div>
+              <h3>Themes / Categories</h3>
+              <p class="framework-section-goal">
+                <strong>Goal:</strong> Group the papers into a small
+                number of meaningful buckets.
+              </p>
+              <p><strong>What to include</strong></p>
+              <ul>
+                <li>3–6 themes that together cover the literature.</li>
+                <li>A short description of each theme.</li>
+                <li>Which papers belong to each theme (a table works well).</li>
+              </ul>
+              <p class="muted">
+                Writing tip: themes should not overlap heavily. If two
+                themes share most of the same papers, merge them.
+              </p>
+              <pre class="ai-output">Example themes for "LLMs in education"
+1. Tutoring &amp; feedback systems
+2. Assessment &amp; academic integrity
+3. Curriculum design
+4. Teacher workload &amp; workflow</pre>
+            </div>
+          </li>
+
+          <li class="framework-section">
+            <div class="framework-step-index">4</div>
+            <div>
+              <h3>Synthesis</h3>
+              <p class="framework-section-goal">
+                <strong>Goal:</strong> Compare findings across papers —
+                don't summarize them one by one.
+              </p>
+              <p><strong>What to include</strong></p>
+              <ul>
+                <li>Where studies agree and where they conflict.</li>
+                <li>How methods differ and how that might explain conflicts.</li>
+                <li>What is well-established vs. still contested.</li>
+              </ul>
+              <p class="muted">
+                Writing tip: whenever you cite a paper, ask
+                <em>why here?</em> If you couldn't cite someone else
+                making the same move, you are probably just summarizing.
+              </p>
+            </div>
+          </li>
+
+          <li class="framework-section">
+            <div class="framework-step-index">5</div>
+            <div>
+              <h3>Gaps &amp; Future Work</h3>
+              <p class="framework-section-goal">
+                <strong>Goal:</strong> Explain what is missing and what
+                should be studied next.
+              </p>
+              <p><strong>What to include</strong></p>
+              <ul>
+                <li>Questions no paper has answered.</li>
+                <li>Methodological weaknesses across the field.</li>
+                <li>Concrete, actionable future research directions.</li>
+              </ul>
+              <p class="muted">
+                Writing tip: "more research is needed" is not a gap.
+                Describe <em>what</em> kind of study would close it.
+              </p>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <section class="panel">
+        <h2>Common pitfalls</h2>
+        <ul class="framework-pitfalls">
+          <li><strong>Annotated bibliography, not a review.</strong> Don't go paper-by-paper; organize by theme.</li>
+          <li><strong>No defined scope.</strong> Readers cannot judge completeness if they don't know your boundary.</li>
+          <li><strong>Invisible search process.</strong> Say how you found the papers, not just what you found.</li>
+          <li><strong>Avoiding conflicts.</strong> Tensions between studies make a review interesting; surface them.</li>
+          <li><strong>Vague gap statements.</strong> Point at specific missing methods, populations, or questions.</li>
+        </ul>
+      </section>
+
+      <section class="panel">
+        <h2>How to use LitLab as you write</h2>
+        <ul class="framework-tips">
+          <li>
+            Use <a href="read-papers.html">Search New Papers</a> repeatedly
+            with different search terms — capture the process.
+          </li>
+          <li>
+            Create one <a href="library.html">collection per theme</a>, so
+            your taxonomy lives in the app, not just your head.
+          </li>
+          <li>
+            Tag each paper with a 1-line reason you kept it — that note
+            becomes the backbone of your synthesis.
+          </li>
+          <li>
+            Use LitLab's AI overview to triage quickly, but always read
+            the methods section yourself before citing.
+          </li>
+        </ul>
+      </section>
+
+      <section class="panel">
+        <h2>Explore other frameworks</h2>
+        <div class="grid grid-2">
+          <a class="mini-card mini-card-link" href="framework-imrad.html">
+            <strong>IMRAD</strong>
+            <p>Report an original empirical study with clear sections.</p>
+          </a>
+          <a class="mini-card mini-card-link" href="framework-theoretical.html">
+            <strong>Theoretical</strong>
+            <p>Propose a claim or model and justify it by argument.</p>
+          </a>
+          <a class="mini-card mini-card-link" href="framework-case-study.html">
+            <strong>Case Study</strong>
+            <p>Go deep on one real-world instance and extract lessons.</p>
+          </a>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

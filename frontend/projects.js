@@ -270,7 +270,29 @@ createFormEl.addEventListener("submit", async (event) => {
   }
 });
 
+function prefillFrameworkFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const requested = (params.get("framework") || "").trim();
+  if (!requested) return;
+
+  const frameworkSelect = createFormEl.querySelector('select[name="framework_type"]');
+  if (!(frameworkSelect instanceof HTMLSelectElement)) return;
+
+  const match = FRAMEWORK_OPTIONS.find(
+    (option) => option.toLowerCase() === requested.toLowerCase()
+  );
+  if (match) {
+    frameworkSelect.value = match;
+  }
+}
+
+prefillFrameworkFromUrl();
+
 if (window.location.hash === "#create") {
+  const createPanel = document.getElementById("create-project-panel");
+  if (createPanel) {
+    setTimeout(() => createPanel.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
+  }
   const titleInput = createFormEl.querySelector('input[name="title"]');
   if (titleInput instanceof HTMLInputElement) {
     setTimeout(() => titleInput.focus(), 0);

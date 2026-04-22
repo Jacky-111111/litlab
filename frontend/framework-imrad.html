@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LitLab | IMRAD Framework Guide</title>
+    <link rel="icon" type="image/png" href="https://img.icons8.com/?size=100&id=aOIjONBdomrC&format=png&color=000000" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="config.js"></script>
+    <script defer src="app.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="container">
+        <a class="brand" href="dashboard.html">LitLab</a>
+        <a class="button secondary" href="dashboard.html">Back to Dashboard</a>
+      </div>
+    </header>
+
+    <main class="container section framework-guide-layout">
+      <nav class="framework-breadcrumb muted">
+        <a href="dashboard.html">Dashboard</a>
+        <span>›</span>
+        <span>Framework Quick Guide</span>
+        <span>›</span>
+        <strong>IMRAD</strong>
+      </nav>
+
+      <section class="panel framework-hero">
+        <span class="badge blue">IMRAD</span>
+        <h1>Write an IMRAD paper</h1>
+        <p class="muted">
+          IMRAD (Introduction, Methods, Results, Discussion) is the standard
+          shape of an empirical research paper. Use it when you collected or
+          analyzed data and want to report what you found.
+        </p>
+        <div class="framework-hero-stats">
+          <div>
+            <p class="muted">When to use</p>
+            <p>You ran an experiment, survey, or data study.</p>
+          </div>
+          <div>
+            <p class="muted">Typical length</p>
+            <p>4,000 – 8,000 words</p>
+          </div>
+          <div>
+            <p class="muted">Key move</p>
+            <p>Answer one clear question with evidence.</p>
+          </div>
+        </div>
+        <div class="inline-actions">
+          <a class="button" href="projects.html?framework=IMRAD#create">
+            Create a project with IMRAD
+          </a>
+          <a class="button secondary" href="library.html">Browse my library</a>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>The big idea</h2>
+        <p>
+          An IMRAD paper tells a tight, linear story: you ask a question,
+          explain how you answered it, show what happened, and interpret
+          what it means. Each section has <em>one job</em>. Keep them
+          separate — results describe data, discussion interprets it.
+        </p>
+      </section>
+
+      <section class="panel">
+        <h2>Section-by-section walkthrough</h2>
+        <ol class="framework-sections">
+          <li class="framework-section">
+            <div class="framework-step-index">1</div>
+            <div>
+              <h3>Introduction</h3>
+              <p class="framework-section-goal">
+                <strong>Goal:</strong> Convince the reader that your
+                question matters, and state it clearly.
+              </p>
+              <p><strong>What to include</strong></p>
+              <ul>
+                <li>Context and background of the problem.</li>
+                <li>What previous researchers have already shown.</li>
+                <li>The gap or unanswered question you are targeting.</li>
+                <li>Your specific research question or hypothesis.</li>
+              </ul>
+              <p class="muted">
+                Writing tip: funnel from broad context → narrow gap →
+                your one question. Don't summarize everything you read.
+              </p>
+              <pre class="ai-output">Example
+"Despite rising interest in climate migration, most studies focus on
+adult populations. It is unclear how K-12 curricula introduce the
+topic. We ask: how do US high-school textbooks frame climate
+migration between 2010 and 2024?"</pre>
+            </div>
+          </li>
+
+          <li class="framework-section">
+            <div class="framework-step-index">2</div>
+            <div>
+              <h3>Methods</h3>
+              <p class="framework-section-goal">
+                <strong>Goal:</strong> Let another researcher reproduce
+                exactly what you did.
+              </p>
+              <p><strong>What to include</strong></p>
+              <ul>
+                <li>Data source(s) and how you selected them.</li>
+                <li>Inclusion / exclusion rules.</li>
+                <li>Variables, measurements, or coding scheme.</li>
+                <li>Tools, software, statistical tests.</li>
+                <li>Ethics / consent, if human subjects are involved.</li>
+              </ul>
+              <p class="muted">
+                Writing tip: write Methods in past tense. If a grader
+                could not replicate your study from this section alone,
+                it is missing something.
+              </p>
+            </div>
+          </li>
+
+          <li class="framework-section">
+            <div class="framework-step-index">3</div>
+            <div>
+              <h3>Results</h3>
+              <p class="framework-section-goal">
+                <strong>Goal:</strong> Describe what you found —
+                <em>without</em> interpreting it yet.
+              </p>
+              <p><strong>What to include</strong></p>
+              <ul>
+                <li>Headline findings stated in plain language.</li>
+                <li>Descriptive stats or counts before inferential tests.</li>
+                <li>Figures and tables that each answer one sub-question.</li>
+                <li>Effect sizes or uncertainty (p-values alone are not enough).</li>
+              </ul>
+              <p class="muted">
+                Writing tip: do not use words like "surprisingly" or
+                "importantly" here — that belongs in Discussion.
+              </p>
+            </div>
+          </li>
+
+          <li class="framework-section">
+            <div class="framework-step-index">4</div>
+            <div>
+              <h3>Discussion</h3>
+              <p class="framework-section-goal">
+                <strong>Goal:</strong> Explain what your results mean,
+                how they connect to prior work, and their limits.
+              </p>
+              <p><strong>What to include</strong></p>
+              <ul>
+                <li>A clear answer to your research question.</li>
+                <li>How findings confirm, extend, or challenge prior work.</li>
+                <li>Honest limitations — don't hide them.</li>
+                <li>Practical or theoretical implications.</li>
+                <li>Specific future work.</li>
+              </ul>
+              <p class="muted">
+                Writing tip: every claim here must trace back to
+                something in Results. If it doesn't, you are
+                speculating.
+              </p>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <section class="panel">
+        <h2>Common pitfalls</h2>
+        <ul class="framework-pitfalls">
+          <li><strong>Mixing results and interpretation.</strong> Keep them in separate sections.</li>
+          <li><strong>No clear research question.</strong> If a reader cannot quote your question after Introduction, rewrite it.</li>
+          <li><strong>Methods without reproducibility.</strong> Name your tools, datasets, versions, and filters.</li>
+          <li><strong>Cherry-picking results.</strong> Report findings that weaken your hypothesis too.</li>
+          <li><strong>Over-claiming.</strong> Scope your conclusions to what your data actually shows.</li>
+        </ul>
+      </section>
+
+      <section class="panel">
+        <h2>How to use LitLab as you write</h2>
+        <ul class="framework-tips">
+          <li>
+            Use <a href="read-papers.html">Search New Papers</a> to collect
+            background reading for your Introduction.
+          </li>
+          <li>
+            Save them to a <a href="library.html">collection</a> so you can
+            cite the same sources across the project.
+          </li>
+          <li>
+            For each paper, use LitLab's AI overview and key-terms features
+            to quickly decide whether it belongs in your related work.
+          </li>
+          <li>
+            In your project workspace, keep a short note per paper:
+            <em>why is this cited, and in which section?</em>
+          </li>
+        </ul>
+      </section>
+
+      <section class="panel">
+        <h2>Explore other frameworks</h2>
+        <div class="grid grid-2">
+          <a class="mini-card mini-card-link" href="framework-review.html">
+            <strong>Review / Survey</strong>
+            <p>Map and compare existing work instead of collecting new data.</p>
+          </a>
+          <a class="mini-card mini-card-link" href="framework-theoretical.html">
+            <strong>Theoretical</strong>
+            <p>Propose a claim or model and justify it by argument.</p>
+          </a>
+          <a class="mini-card mini-card-link" href="framework-case-study.html">
+            <strong>Case Study</strong>
+            <p>Go deep on one real-world instance and extract lessons.</p>
+          </a>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

@@ -953,6 +953,181 @@ label {
   margin: 0 0 0.4rem;
 }
 
+/* Link-style mini card used by the Framework Quick Guide cards on the
+   dashboard and by the "Explore other frameworks" rows inside each
+   framework guide page. Inherits text color (no underline) but
+   reacts on hover to signal it is clickable. */
+a.mini-card-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+a.mini-card-link:hover,
+a.mini-card-link:focus-visible {
+  border-color: var(--primary);
+  box-shadow: 0 6px 18px rgba(33, 88, 217, 0.12);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+a.mini-card-link strong {
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+a.mini-card-link p {
+  margin: 0 0 0.45rem;
+  color: var(--muted);
+}
+
+a.mini-card-link .mini-card-cta {
+  display: inline-block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+/* ---------- Framework guide pages ---------- */
+
+.framework-guide-layout {
+  display: grid;
+  gap: 1rem;
+  width: min(1120px, 92vw);
+  margin: 0 auto;
+}
+
+.framework-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.framework-breadcrumb a {
+  color: var(--primary);
+}
+
+.framework-breadcrumb strong {
+  color: var(--text);
+}
+
+.framework-hero h1 {
+  margin: 0.3rem 0 0.5rem;
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+}
+
+.framework-hero > .badge {
+  width: fit-content;
+}
+
+.framework-hero > p.muted {
+  max-width: 70ch;
+  line-height: 1.55;
+}
+
+.framework-hero-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.6rem 1rem;
+  margin: 0.8rem 0 0.6rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+
+.framework-hero-stats p {
+  margin: 0;
+}
+
+.framework-hero-stats p.muted {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.15rem;
+}
+
+.framework-sections {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+}
+
+.framework-section {
+  display: grid;
+  grid-template-columns: 2.4rem 1fr;
+  gap: 0.9rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+
+.framework-section h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1.08rem;
+}
+
+.framework-section ul {
+  margin: 0.3rem 0 0.5rem;
+  padding-left: 1.15rem;
+  line-height: 1.55;
+}
+
+.framework-section p {
+  margin: 0.35rem 0;
+  line-height: 1.55;
+}
+
+.framework-section-goal {
+  margin: 0 0 0.3rem;
+}
+
+.framework-section pre.ai-output {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.framework-step-index {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.framework-pitfalls,
+.framework-tips {
+  margin: 0.4rem 0 0;
+  padding-left: 1.15rem;
+  line-height: 1.6;
+}
+
+.framework-pitfalls li + li,
+.framework-tips li + li {
+  margin-top: 0.35rem;
+}
+
+@media (max-width: 640px) {
+  .framework-section {
+    grid-template-columns: 1fr;
+  }
+
+  .framework-step-index {
+    width: 2rem;
+    height: 2rem;
+  }
+}
+
 .prompt {
   margin-bottom: 0;
 }
