@@ -5,3 +5,4 @@ requests
 openai
 supabase
 pypdf
+qrcode[pil]

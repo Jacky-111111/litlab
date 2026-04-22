@@ -97,6 +97,30 @@
       </section>
     </main>
 
+    <dialog id="share-qr-dialog" class="dialog">
+      <div class="dialog-form share-qr-body">
+        <h3>Share QR code</h3>
+        <p class="muted share-qr-subtitle">
+          Scan to open this collection. LitLab still checks viewer permissions
+          after the link resolves.
+        </p>
+        <div class="share-qr-canvas-wrap">
+          <img
+            id="share-qr-img"
+            alt="QR code for share link"
+            width="240"
+            height="240"
+          />
+        </div>
+        <p class="share-qr-url" id="share-qr-url"></p>
+        <p id="share-qr-message" class="message info" hidden></p>
+        <div class="dialog-actions">
+          <button type="button" class="secondary" id="share-qr-download">Download PNG</button>
+          <button type="button" data-dialog-action="close-qr">Close</button>
+        </div>
+      </div>
+    </dialog>
+
     <dialog id="new-collection-dialog" class="dialog">
       <form id="new-collection-form" method="dialog" class="dialog-form">
         <h3>New Collection</h3>
@@ -153,6 +177,20 @@
           <div class="sharing-link-row">
             <input type="text" id="sharing-link-input" readonly placeholder="Preparing link…" />
             <button type="button" class="secondary" id="sharing-link-copy">Copy</button>
+            <button
+              type="button"
+              class="secondary icon-btn"
+              id="sharing-link-qr"
+              aria-label="Show QR code"
+              title="Show QR code"
+            >
+              <img
+                src="https://img.icons8.com/?size=48&id=ObnBoaCt9lCV&format=png"
+                alt=""
+                aria-hidden="true"
+              />
+              <span>QR</span>
+            </button>
           </div>
         </section>
 

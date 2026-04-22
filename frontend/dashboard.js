@@ -20,7 +20,17 @@ const visibilitySelectEl = document.getElementById("collection-visibility-select
 const sharingLinkSectionEl = document.getElementById("sharing-link-section");
 const sharingLinkInputEl = document.getElementById("sharing-link-input");
 const sharingLinkCopyEl = document.getElementById("sharing-link-copy");
+const sharingLinkQrEl = document.getElementById("sharing-link-qr");
 const sharingEmailsSectionEl = document.getElementById("sharing-emails-section");
+const shareQrDialogEl = document.getElementById("share-qr-dialog");
+const shareQrImgEl = document.getElementById("share-qr-img");
+const shareQrUrlEl = document.getElementById("share-qr-url");
+const shareQrDownloadEl = document.getElementById("share-qr-download");
+const shareQrMessageEl = document.getElementById("share-qr-message");
+
+// Active blob URL rendered into the QR <img>. Kept so we can revoke it on
+// close (avoids memory leaks) and reuse its bytes for the Download button.
+let currentShareQrBlobUrl = "";
 const sharingEmailsInputEl = document.getElementById("sharing-emails-input");
 
 let collectionsCache = [];
@@ -517,6 +527,133 @@ sharingLinkCopyEl?.addEventListener("click", async () => {
   } catch (_error) {
     sharingLinkInputEl?.select();
     setCollectionDialogMessage("Copy failed. Select and copy manually.", "warning");
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Share QR modal
+// ---------------------------------------------------------------------------
+
+function setShareQrMessage(text, tone = "info") {
+  if (!shareQrMessageEl) return;
+  if (!text) {
+    shareQrMessageEl.textContent = "";
+    shareQrMessageEl.hidden = true;
+    return;
+  }
+  shareQrMessageEl.textContent = text;
+  shareQrMessageEl.className = `message ${tone}`;
+  shareQrMessageEl.hidden = false;
+}
+
+function revokeShareQrBlob() {
+  if (currentShareQrBlobUrl) {
+    URL.revokeObjectURL(currentShareQrBlobUrl);
+    currentShareQrBlobUrl = "";
+  }
+  if (shareQrImgEl) shareQrImgEl.removeAttribute("src");
+}
+
+function closeShareQrDialog() {
+  if (!shareQrDialogEl) return;
+  revokeShareQrBlob();
+  if (typeof shareQrDialogEl.close === "function") {
+    shareQrDialogEl.close();
+  } else {
+    shareQrDialogEl.removeAttribute("open");
+  }
+}
+
+async function fetchShareQrBlob(slug, { size = 512 } = {}) {
+  // The QR endpoint is owner-only, so we need the bearer token. Native <img>
+  // tags cannot send Authorization headers, so we fetch() ourselves and hand
+  // the <img> a blob URL — this also makes the Download button a pure href
+  // save (no base64 round-trip, no cross-origin canvas issues).
+  const token = window.LitLab.getAccessToken();
+  const base = window.LitLab.LitLabConfig.apiBaseUrl.replace(/\/$/, "");
+  const qs = new URLSearchParams({
+    size: String(size),
+    origin: window.location.origin,
+  });
+  const url = `${base}/shared/c/${encodeURIComponent(slug)}/qr.png?${qs.toString()}`;
+  const response = await fetch(url, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!response.ok) {
+    let detail = `Request failed (${response.status})`;
+    try {
+      const payload = await response.json();
+      detail = payload.detail || payload.message || detail;
+    } catch (_error) {
+      // Response was not JSON — keep the generic message.
+    }
+    throw new Error(detail);
+  }
+  return response.blob();
+}
+
+async function openShareQrDialog(url) {
+  if (!shareQrDialogEl || !shareQrImgEl) return;
+  const slug = sharingStateForOpenDialog.share_slug || "";
+  if (!url || !slug) {
+    setCollectionDialogMessage("Share link is not ready yet.", "warning");
+    return;
+  }
+
+  if (shareQrUrlEl) shareQrUrlEl.textContent = url;
+  setShareQrMessage("Loading QR code…");
+  revokeShareQrBlob();
+
+  if (typeof shareQrDialogEl.showModal === "function") {
+    shareQrDialogEl.showModal();
+  } else {
+    shareQrDialogEl.setAttribute("open", "");
+  }
+
+  try {
+    const blob = await fetchShareQrBlob(slug, { size: 512 });
+    currentShareQrBlobUrl = URL.createObjectURL(blob);
+    shareQrImgEl.src = currentShareQrBlobUrl;
+    setShareQrMessage("");
+  } catch (error) {
+    setShareQrMessage(error?.message || "Could not render QR code.", "error");
+  }
+}
+
+sharingLinkQrEl?.addEventListener("click", () => {
+  const url = sharingLinkInputEl?.value || "";
+  openShareQrDialog(url);
+});
+
+shareQrDialogEl?.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLButtonElement)) return;
+  if (target.dataset.dialogAction === "close-qr") {
+    event.preventDefault();
+    closeShareQrDialog();
+  }
+});
+
+shareQrDialogEl?.addEventListener("close", () => {
+  revokeShareQrBlob();
+});
+
+shareQrDownloadEl?.addEventListener("click", () => {
+  if (!currentShareQrBlobUrl) {
+    setShareQrMessage("QR code is still loading…", "warning");
+    return;
+  }
+  try {
+    const anchor = document.createElement("a");
+    anchor.href = currentShareQrBlobUrl;
+    const slug = sharingStateForOpenDialog.share_slug || "share";
+    anchor.download = `litlab-collection-${slug}.png`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    setShareQrMessage("QR code saved.", "success");
+  } catch (_error) {
+    setShareQrMessage("Could not download QR code.", "error");
   }
 });
 

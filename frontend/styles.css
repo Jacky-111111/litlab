@@ -360,6 +360,57 @@ label {
   align-items: center;
 }
 
+/* Compact icon + label buttons (e.g. the QR button next to Copy). */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.icon-btn img {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+/* Share QR modal content. */
+.share-qr-body {
+  align-items: center;
+  text-align: center;
+}
+
+.share-qr-subtitle {
+  margin: 0;
+  max-width: 38ch;
+}
+
+.share-qr-canvas-wrap {
+  padding: 0.6rem;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.share-qr-canvas-wrap img,
+.share-qr-canvas-wrap canvas {
+  display: block;
+  width: 240px;
+  height: 240px;
+  image-rendering: pixelated;
+}
+
+.share-qr-url {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  color: var(--muted);
+  word-break: break-all;
+  max-width: 36ch;
+}
+
 @media (max-width: 860px) {
   .library-dashboard-split {
     grid-template-columns: 1fr;

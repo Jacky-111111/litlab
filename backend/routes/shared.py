@@ -1,8 +1,15 @@
-from fastapi import APIRouter, Depends
+import io
+import os
+from urllib.parse import urlparse
+
+import qrcode
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
 try:
     from ..services.supabase_service import (
         get_collection_by_slug,
+        get_collection_for_user,
+        get_current_user_id,
         get_optional_user,
         get_sharer_public_profile,
         list_papers_in_collection,
@@ -12,6 +19,8 @@ try:
 except ImportError:
     from services.supabase_service import (
         get_collection_by_slug,
+        get_collection_for_user,
+        get_current_user_id,
         get_optional_user,
         get_sharer_public_profile,
         list_papers_in_collection,
@@ -79,3 +88,97 @@ def get_shared_collection(
             "is_authenticated": user is not None,
         },
     }
+
+
+# ---------------------------------------------------------------------------
+# Shared-link QR code (owner-only)
+# ---------------------------------------------------------------------------
+
+# Where the generated QR should point. Priority:
+#   1. ?origin=... query parameter (useful in dev where frontend host varies)
+#   2. FRONTEND_ORIGIN env var
+# We then append `/shared-collection.html?slug=<slug>` to build the absolute
+# URL embedded in the QR image.
+def _resolve_frontend_origin(origin_override: str | None) -> str:
+    candidate = (origin_override or os.getenv("FRONTEND_ORIGIN") or "").strip()
+    if not candidate:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Cannot build a share URL: set FRONTEND_ORIGIN on the server "
+                "or pass ?origin=https://your-frontend to this endpoint."
+            ),
+        )
+    parsed = urlparse(candidate)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="origin must be an absolute http(s) URL.",
+        )
+    return f"{parsed.scheme}://{parsed.netloc}"
+
+
+@router.get("/c/{share_slug}/qr.png")
+def get_shared_collection_qr(
+    share_slug: str,
+    size: int = Query(default=512, ge=128, le=1024),
+    download: bool = Query(default=False),
+    origin: str | None = Query(default=None),
+    user_id: str = Depends(get_current_user_id),
+) -> Response:
+    """Render a PNG QR code for a collection's share link.
+
+    Owner-only. The encoded URL points to the public shared-collection page;
+    permission checks still happen when a scanner actually opens the link
+    (`GET /shared/c/{slug}`), so this endpoint does not leak anything a
+    shareable collection would not already leak via its slug.
+    """
+    collection = get_collection_by_slug(share_slug)
+    if not collection:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found.")
+
+    # Owner-only: re-fetch with ownership check so RLS semantics stay obvious.
+    owned = get_collection_for_user(collection["id"], user_id)
+    if not owned:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found.")
+
+    if (owned.get("visibility") or "private") not in ("selected", "public"):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="QR codes are only available for 'selected' or 'public' collections.",
+        )
+
+    frontend_origin = _resolve_frontend_origin(origin)
+    share_url = f"{frontend_origin}/shared-collection.html?slug={share_slug}"
+
+    # qrcode box_size roughly controls module pixel size. QR v4 at EC level M
+    # has a 33x33 grid; we want the final image edge around `size` pixels.
+    box_size = max(4, size // 33)
+    qr = qrcode.QRCode(
+        version=None,
+        error_correction=qrcode.constants.ERROR_CORRECT_M,
+        box_size=box_size,
+        border=2,
+    )
+    qr.add_data(share_url)
+    qr.make(fit=True)
+    # LitLab-black foreground on pure white background — maximum scannability
+    # while staying on-brand with our text color (#131722).
+    img = qr.make_image(fill_color="#131722", back_color="#ffffff")
+
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    png_bytes = buf.getvalue()
+
+    headers = {
+        # QR rendering is deterministic given (slug, size, origin). Cache at
+        # the edge for a day; owners regenerating the slug invalidates the
+        # URL anyway because the slug changes.
+        "Cache-Control": "public, max-age=86400",
+    }
+    if download:
+        headers["Content-Disposition"] = (
+            f'attachment; filename="litlab-collection-{share_slug}.png"'
+        )
+
+    return Response(content=png_bytes, media_type="image/png", headers=headers)
