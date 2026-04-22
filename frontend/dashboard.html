@@ -62,14 +62,15 @@
             </section>
           </div>
 
-          <div class="inline-actions">
-            <a class="button" href="library.html">Manage Library</a>
+          <div class="inline-actions library-footer-actions">
+            <a class="button" href="library.html">Open Library</a>
+            <button type="button" class="secondary" id="new-collection-btn">+ New Collection</button>
           </div>
         </article>
 
         <article class="panel">
           <div class="card-head">
-            <h2>Your Projects</h2>
+            <h2>My Projects</h2>
             <a class="button" href="projects.html#create" aria-label="Create a new project">+ Create Project</a>
           </div>
           <p id="dashboard-message" class="message info" hidden></p>
@@ -96,6 +97,33 @@
       </section>
     </main>
 
+    <dialog id="new-collection-dialog" class="dialog">
+      <form id="new-collection-form" method="dialog" class="dialog-form">
+        <h3>New Collection</h3>
+        <label>
+          Title
+          <input name="title" type="text" required maxlength="200" placeholder="e.g. LLM Essays" />
+        </label>
+        <label>
+          Description
+          <textarea name="description" rows="3" maxlength="4000" placeholder="What is this collection for?"></textarea>
+        </label>
+        <label>
+          Visibility
+          <select name="visibility">
+            <option value="private" selected>Private — only you</option>
+            <option value="selected">Selected — invited emails only (sign-in required)</option>
+            <option value="public">Public — anyone with the link</option>
+          </select>
+        </label>
+        <p id="new-collection-message" class="message info" hidden></p>
+        <div class="dialog-actions">
+          <button type="button" class="secondary" data-dialog-action="cancel">Cancel</button>
+          <button type="submit">Create</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog id="collection-settings-dialog" class="dialog dialog-wide">
       <form id="collection-settings-form" method="dialog" class="dialog-form">
         <h3>Collection Settings</h3>
@@ -112,7 +140,7 @@
           Visibility
           <select name="visibility" id="collection-visibility-select">
             <option value="private">Private — only you</option>
-            <option value="selected">Selected people — sign-in + invited email</option>
+            <option value="selected">Selected — invited emails only (sign-in required)</option>
             <option value="public">Public — anyone with the link</option>
           </select>
         </label>
@@ -123,17 +151,18 @@
             Anyone opening this link will be checked by LitLab before the collection is shown.
           </p>
           <div class="sharing-link-row">
-            <input type="text" id="sharing-link-input" readonly placeholder="No share link yet." />
+            <input type="text" id="sharing-link-input" readonly placeholder="Preparing link…" />
             <button type="button" class="secondary" id="sharing-link-copy">Copy</button>
-            <button type="button" class="secondary" id="sharing-link-regenerate">Regenerate</button>
           </div>
         </section>
 
         <section class="sharing-section" id="sharing-emails-section" hidden>
-          <h4>Invited emails</h4>
+          <h4>Invited emails <span class="badge teal">Selected only</span></h4>
           <p class="muted">
-            Only users signed into LitLab with one of these emails can open the link.
-            Enter one email per line.
+            Only applies when visibility is <strong>Selected</strong>. Enter one
+            email per line — only LitLab users signed in with one of these
+            emails can open the share link. This list is ignored for
+            <strong>Private</strong> and <strong>Public</strong> collections.
           </p>
           <textarea
             id="sharing-emails-input"

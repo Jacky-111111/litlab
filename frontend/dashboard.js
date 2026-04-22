@@ -9,6 +9,10 @@ const librarySummaryEl = document.getElementById("library-summary");
 const libraryPreviewEl = document.getElementById("library-preview");
 const collectionsGridEl = document.getElementById("collections-grid");
 const collectionsEmptyEl = document.getElementById("collections-empty-state");
+const newCollectionBtnEl = document.getElementById("new-collection-btn");
+const newCollectionDialogEl = document.getElementById("new-collection-dialog");
+const newCollectionFormEl = document.getElementById("new-collection-form");
+const newCollectionMessageEl = document.getElementById("new-collection-message");
 const collectionSettingsDialogEl = document.getElementById("collection-settings-dialog");
 const collectionSettingsFormEl = document.getElementById("collection-settings-form");
 const collectionSettingsMessageEl = document.getElementById("collection-settings-message");
@@ -16,7 +20,6 @@ const visibilitySelectEl = document.getElementById("collection-visibility-select
 const sharingLinkSectionEl = document.getElementById("sharing-link-section");
 const sharingLinkInputEl = document.getElementById("sharing-link-input");
 const sharingLinkCopyEl = document.getElementById("sharing-link-copy");
-const sharingLinkRegenerateEl = document.getElementById("sharing-link-regenerate");
 const sharingEmailsSectionEl = document.getElementById("sharing-emails-section");
 const sharingEmailsInputEl = document.getElementById("sharing-emails-input");
 
@@ -283,6 +286,79 @@ projectsGridEl.addEventListener("click", async (event) => {
   }
 });
 
+function setNewCollectionMessage(text, tone = "info") {
+  if (!newCollectionMessageEl) return;
+  if (!text) {
+    newCollectionMessageEl.textContent = "";
+    newCollectionMessageEl.hidden = true;
+    return;
+  }
+  newCollectionMessageEl.textContent = text;
+  newCollectionMessageEl.className = `message ${tone}`;
+  newCollectionMessageEl.hidden = false;
+}
+
+function openNewCollectionDialog() {
+  if (!newCollectionDialogEl || !newCollectionFormEl) return;
+  newCollectionFormEl.reset();
+  setNewCollectionMessage("");
+  if (typeof newCollectionDialogEl.showModal === "function") {
+    newCollectionDialogEl.showModal();
+  } else {
+    newCollectionDialogEl.setAttribute("open", "");
+  }
+  const titleInput = newCollectionFormEl.elements.title;
+  if (titleInput && typeof titleInput.focus === "function") {
+    setTimeout(() => titleInput.focus(), 0);
+  }
+}
+
+function closeNewCollectionDialog() {
+  if (!newCollectionDialogEl) return;
+  if (typeof newCollectionDialogEl.close === "function") {
+    newCollectionDialogEl.close();
+  } else {
+    newCollectionDialogEl.removeAttribute("open");
+  }
+}
+
+newCollectionBtnEl?.addEventListener("click", () => {
+  openNewCollectionDialog();
+});
+
+newCollectionFormEl?.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLButtonElement)) return;
+  if (target.dataset.dialogAction === "cancel") {
+    event.preventDefault();
+    closeNewCollectionDialog();
+  }
+});
+
+newCollectionFormEl?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const formData = new FormData(newCollectionFormEl);
+  const title = String(formData.get("title") || "").trim();
+  const description = String(formData.get("description") || "").trim();
+  const visibility = String(formData.get("visibility") || "private");
+  if (!title) {
+    setNewCollectionMessage("Title is required.", "error");
+    return;
+  }
+  setNewCollectionMessage("Creating...");
+  try {
+    await window.LitLab.apiFetch("/collections", {
+      method: "POST",
+      body: JSON.stringify({ title, description, visibility }),
+    });
+    setNewCollectionMessage("Collection created.", "success");
+    closeNewCollectionDialog();
+    await Promise.all([loadCollections(), loadLibraryOverview()]);
+  } catch (error) {
+    setNewCollectionMessage(error.message || "Could not create collection.", "error");
+  }
+});
+
 function setCollectionDialogMessage(text, tone = "info") {
   if (!collectionSettingsMessageEl) return;
   if (!text) {
@@ -388,40 +464,27 @@ function parseEmailList(raw) {
     .filter(Boolean);
 }
 
-visibilitySelectEl?.addEventListener("change", (event) => {
-  const target = event.target;
-  if (!(target instanceof HTMLSelectElement)) return;
-  applySharingSections(target.value);
-});
-
-sharingLinkCopyEl?.addEventListener("click", async () => {
-  const url = sharingLinkInputEl?.value || "";
-  if (!url) return;
-  try {
-    await navigator.clipboard.writeText(url);
-    setCollectionDialogMessage("Link copied.", "success");
-  } catch (_error) {
-    sharingLinkInputEl?.select();
-    setCollectionDialogMessage("Copy failed. Select and copy manually.", "warning");
-  }
-});
-
-sharingLinkRegenerateEl?.addEventListener("click", async () => {
+async function ensureSharingLinkForVisibility(visibility) {
+  // Called when the user switches the visibility dropdown. For shareable
+  // states, we eagerly PATCH so the backend persists the visibility AND
+  // ensures a share_slug exists, then we reflect the returned URL in the UI.
+  // The manual "Regenerate" button has been removed in favor of this flow.
   const collectionId = sharingStateForOpenDialog.collectionId;
-  const visibility = visibilitySelectEl?.value || "private";
   if (!collectionId) return;
-  if (visibility === "private") {
-    setCollectionDialogMessage(
-      "Switch visibility to Selected or Public, click Save, then regenerate the link.",
-      "warning"
-    );
-    return;
+  if (visibility !== "selected" && visibility !== "public") return;
+
+  if (sharingLinkInputEl) {
+    sharingLinkInputEl.value = "";
+    sharingLinkInputEl.placeholder = "Preparing link…";
   }
-  setCollectionDialogMessage("Generating new link...");
+  setCollectionDialogMessage("Preparing share link…");
   try {
     const data = await window.LitLab.apiFetch(
-      `/collections/${collectionId}/sharing/regenerate-link`,
-      { method: "POST" }
+      `/collections/${collectionId}/sharing`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ visibility }),
+      }
     );
     applySharingState({
       collectionId,
@@ -429,9 +492,31 @@ sharingLinkRegenerateEl?.addEventListener("click", async () => {
       share_url_path: data.share_url_path ?? null,
       invited_emails: data.invited_emails ?? sharingStateForOpenDialog.invited_emails,
     });
-    setCollectionDialogMessage("New link generated.", "success");
+    setCollectionDialogMessage("Share link ready.", "success");
   } catch (error) {
-    setCollectionDialogMessage(error.message || "Could not regenerate link.", "error");
+    setCollectionDialogMessage(error.message || "Could not prepare share link.", "error");
+  }
+}
+
+visibilitySelectEl?.addEventListener("change", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLSelectElement)) return;
+  applySharingSections(target.value);
+  ensureSharingLinkForVisibility(target.value);
+});
+
+sharingLinkCopyEl?.addEventListener("click", async () => {
+  const url = sharingLinkInputEl?.value || "";
+  if (!url) {
+    setCollectionDialogMessage("No link to copy yet.", "warning");
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    setCollectionDialogMessage("Link copied.", "success");
+  } catch (_error) {
+    sharingLinkInputEl?.select();
+    setCollectionDialogMessage("Copy failed. Select and copy manually.", "warning");
   }
 });
 

@@ -345,6 +345,21 @@ label {
   font-size: 1rem;
 }
 
+/* Cap the Recent papers and Collections lists so the dashboard does not grow
+   endlessly when the user has many items. Anything past ~3 cards becomes
+   scrollable inside the column. */
+.library-split-col #library-preview,
+.library-split-col #collections-grid {
+  max-height: 34rem;
+  overflow-y: auto;
+  padding-right: 0.35rem;
+}
+
+.library-footer-actions {
+  justify-content: space-between;
+  align-items: center;
+}
+
 @media (max-width: 860px) {
   .library-dashboard-split {
     grid-template-columns: 1fr;
