@@ -43,6 +43,68 @@ function setMessage(text, tone = "info") {
   messageEl.className = `message ${tone}`;
 }
 
+async function printSavedPaperPdf() {
+  const payload = await window.LitLab.apiFetch(
+    `/papers/${currentPaperId}/pdf-download-url?mode=view`
+  );
+  const viewUrl = payload.download_url || "";
+  if (!viewUrl) {
+    throw new Error("Could not get PDF for printing.");
+  }
+  const res = await fetch(viewUrl);
+  if (!res.ok) {
+    throw new Error("Could not fetch PDF.");
+  }
+  const blob = await res.blob();
+  const blobUrl = URL.createObjectURL(new Blob([blob], { type: "application/pdf" }));
+
+  await new Promise((resolve, reject) => {
+    const iframe = document.createElement("iframe");
+    iframe.setAttribute("aria-hidden", "true");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    let settled = false;
+    const finishOk = () => {
+      if (settled) return;
+      settled = true;
+      URL.revokeObjectURL(blobUrl);
+      iframe.remove();
+      resolve();
+    };
+    const finishErr = (err) => {
+      if (settled) return;
+      settled = true;
+      URL.revokeObjectURL(blobUrl);
+      iframe.remove();
+      reject(err instanceof Error ? err : new Error("Could not print PDF."));
+    };
+    iframe.onerror = () => finishErr(new Error("Could not load PDF for printing."));
+    iframe.onload = () => {
+      setTimeout(() => {
+        try {
+          const w = iframe.contentWindow;
+          if (!w) {
+            finishErr(new Error("Print is not available in this browser."));
+            return;
+          }
+          w.focus();
+          w.print();
+        } catch (err) {
+          finishErr(err);
+          return;
+        }
+        setTimeout(finishOk, 500);
+      }, 200);
+    };
+    document.body.appendChild(iframe);
+    iframe.src = blobUrl;
+  });
+}
+
 function notifyPdfPreviewContext() {
   const paperId = String(currentPaperId || "").trim();
   const hasStoredPdf =
@@ -120,6 +182,7 @@ function renderSavedSourceInfo(paper) {
       <button type="button" class="secondary" data-source-action="copy-url" ${url ? "" : "disabled"}>Copy URL</button>
       <button type="button" class="secondary" data-source-action="view-pdf" ${pdfButtonsDisabled}>View PDF</button>
       <button type="button" class="secondary" data-source-action="download-pdf" ${pdfButtonsDisabled}>Download PDF</button>
+      <button type="button" class="secondary" data-source-action="print-pdf" ${pdfButtonsDisabled}>Print PDF</button>
     </div>`
   );
   savedSourceInfoEl.classList.remove("muted");
@@ -820,6 +883,19 @@ savedSourceInfoEl.addEventListener("click", async (event) => {
       setMessage("PDF download started.", "success");
     } catch (error) {
       setMessage(error.message || "Could not download saved PDF.", "error");
+    }
+    return;
+  }
+
+  if (action === "print-pdf") {
+    if (!currentPaperId) {
+      setMessage("No saved paper selected.", "warning");
+      return;
+    }
+    try {
+      await printSavedPaperPdf();
+    } catch (error) {
+      setMessage(error.message || "Could not print PDF.", "error");
     }
   }
 });

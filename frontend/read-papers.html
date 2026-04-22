@@ -176,62 +176,54 @@
               </article>
             </div>
           </section>
+        </div>
+      </section>
 
-          <section class="panel read-papers-pdf-preview" id="paper-pdf-preview-panel">
-            <div id="pdf-preview-collapsed" class="pdf-preview-collapsed">
-              <h2>Paper PDF</h2>
-              <p class="muted">
-                Expand an inline preview of your PDF with page controls, zoom, rotation, and full screen. Requires a
-                saved library PDF or a file chosen in Paper Source above.
-              </p>
-              <div class="inline-actions">
-                <button type="button" id="pdf-preview-view-btn" disabled>View Paper</button>
-              </div>
+      <section class="panel read-papers-pdf-preview" id="paper-pdf-preview-panel">
+        <div class="pdf-preview-head">
+          <div class="pdf-preview-head-meta" id="pdf-preview-head-meta" hidden>
+            <h2 id="pdf-preview-filename" class="pdf-preview-filename-heading">Preview</h2>
+            <p id="pdf-preview-download-wrap" class="pdf-preview-download-wrap" hidden>
+              <a id="pdf-preview-download-link" class="outbound-link" href="#" target="_blank" rel="noopener noreferrer"></a>
+            </p>
+          </div>
+          <button type="button" class="secondary pdf-preview-toggle-btn" id="pdf-preview-toggle-btn" disabled>
+            View PDF
+          </button>
+        </div>
+        <p id="pdf-preview-status" class="message info" hidden></p>
+        <div id="pdf-preview-body" class="pdf-preview-body" hidden>
+          <div id="pdf-preview-stage" class="pdf-preview-stage">
+            <div class="pdf-preview-toolbar" id="pdf-preview-toolbar" aria-label="PDF controls">
+              <span class="pdf-toolbar-label">Page</span>
+              <button type="button" class="pdf-toolbar-btn" id="pdf-preview-page-prev" aria-label="Previous page">
+                &lt;
+              </button>
+              <input
+                class="pdf-preview-page-input"
+                id="pdf-preview-page-input"
+                type="number"
+                min="1"
+                value="1"
+                aria-label="Current page"
+              />
+              <button type="button" class="pdf-toolbar-btn" id="pdf-preview-page-next" aria-label="Next page">
+                &gt;
+              </button>
+              <span class="pdf-toolbar-of" id="pdf-preview-page-count">of 0</span>
+              <button type="button" class="pdf-toolbar-btn" id="pdf-preview-rotate" aria-label="Rotate">↻</button>
+              <span class="pdf-toolbar-spacer" aria-hidden="true"></span>
+              <button type="button" class="pdf-toolbar-btn" id="pdf-preview-zoom-out" aria-label="Zoom out">−</button>
+              <span class="pdf-toolbar-zoom" id="pdf-preview-zoom-label">100%</span>
+              <button type="button" class="pdf-toolbar-btn" id="pdf-preview-zoom-in" aria-label="Zoom in">+</button>
+              <button type="button" class="pdf-toolbar-btn pdf-toolbar-fs" id="pdf-preview-fullscreen" aria-label="Full screen">
+                ⤢
+              </button>
             </div>
-            <div id="pdf-preview-expanded" class="pdf-preview-expanded" hidden>
-              <div class="pdf-preview-expanded-head">
-                <div class="pdf-preview-expanded-meta">
-                  <h2 id="pdf-preview-filename" class="pdf-preview-filename-heading">Preview</h2>
-                  <p id="pdf-preview-download-wrap" class="pdf-preview-download-wrap" hidden>
-                    <a id="pdf-preview-download-link" class="outbound-link" href="#" target="_blank" rel="noopener noreferrer"></a>
-                  </p>
-                </div>
-                <button type="button" class="secondary" id="pdf-preview-show-less-btn">Show Less</button>
-              </div>
-              <p id="pdf-preview-status" class="message info" hidden></p>
-              <div id="pdf-preview-stage" class="pdf-preview-stage">
-                <div class="pdf-preview-toolbar" id="pdf-preview-toolbar" aria-label="PDF controls">
-                  <span class="pdf-toolbar-label">Page</span>
-                  <button type="button" class="pdf-toolbar-btn" id="pdf-preview-page-prev" aria-label="Previous page">
-                    &lt;
-                  </button>
-                  <input
-                    class="pdf-preview-page-input"
-                    id="pdf-preview-page-input"
-                    type="number"
-                    min="1"
-                    value="1"
-                    aria-label="Current page"
-                  />
-                  <button type="button" class="pdf-toolbar-btn" id="pdf-preview-page-next" aria-label="Next page">
-                    &gt;
-                  </button>
-                  <span class="pdf-toolbar-of" id="pdf-preview-page-count">of 0</span>
-                  <button type="button" class="pdf-toolbar-btn" id="pdf-preview-rotate" aria-label="Rotate">↻</button>
-                  <span class="pdf-toolbar-spacer" aria-hidden="true"></span>
-                  <button type="button" class="pdf-toolbar-btn" id="pdf-preview-zoom-out" aria-label="Zoom out">−</button>
-                  <span class="pdf-toolbar-zoom" id="pdf-preview-zoom-label">100%</span>
-                  <button type="button" class="pdf-toolbar-btn" id="pdf-preview-zoom-in" aria-label="Zoom in">+</button>
-                  <button type="button" class="pdf-toolbar-btn pdf-toolbar-fs" id="pdf-preview-fullscreen" aria-label="Full screen">
-                    ⤢
-                  </button>
-                </div>
-                <div class="pdf-preview-canvas-wrap" id="pdf-preview-canvas-wrap">
-                  <canvas id="pdf-preview-canvas"></canvas>
-                </div>
-              </div>
+            <div class="pdf-preview-canvas-wrap" id="pdf-preview-canvas-wrap">
+              <canvas id="pdf-preview-canvas"></canvas>
             </div>
-          </section>
+          </div>
         </div>
       </section>
     </main>

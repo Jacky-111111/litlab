@@ -776,14 +776,21 @@ label {
 
 .read-papers-workspace {
   display: grid;
-  grid-template-columns: minmax(320px, 0.95fr) minmax(560px, 1.35fr);
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
   gap: 1rem;
   align-items: start;
+  min-width: 0;
 }
 
 .read-papers-controls {
   position: sticky;
   top: 90px;
+  min-width: 0;
+}
+
+.read-papers-content {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .paper-source-panel {
@@ -801,24 +808,30 @@ label {
 
 .read-papers-content .panel {
   scroll-margin-top: 96px;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
-.read-papers-pdf-preview .pdf-preview-collapsed h2 {
-  margin-top: 0;
-}
-
-.pdf-preview-expanded-head {
+.read-papers-pdf-preview .pdf-preview-head {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 1rem;
   flex-wrap: wrap;
+}
+
+.read-papers-pdf-preview--expanded .pdf-preview-head {
+  justify-content: space-between;
   margin-bottom: 0.75rem;
 }
 
-.pdf-preview-expanded-meta {
+.pdf-preview-head-meta {
   min-width: 0;
   flex: 1 1 200px;
+}
+
+.read-papers-pdf-preview .pdf-preview-toggle-btn {
+  flex-shrink: 0;
 }
 
 .pdf-preview-filename-heading {

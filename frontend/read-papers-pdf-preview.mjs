@@ -62,10 +62,10 @@ let objectUrl = null;
 let currentPageNum = 1;
 let scale = 1.25;
 let rotation = 0;
-const viewBtn = document.getElementById("pdf-preview-view-btn");
-const collapsedEl = document.getElementById("pdf-preview-collapsed");
-const expandedEl = document.getElementById("pdf-preview-expanded");
-const showLessBtn = document.getElementById("pdf-preview-show-less-btn");
+const panelEl = document.getElementById("paper-pdf-preview-panel");
+const headMetaEl = document.getElementById("pdf-preview-head-meta");
+const toggleBtn = document.getElementById("pdf-preview-toggle-btn");
+const previewBodyEl = document.getElementById("pdf-preview-body");
 const filenameEl = document.getElementById("pdf-preview-filename");
 const downloadWrap = document.getElementById("pdf-preview-download-wrap");
 const downloadLink = document.getElementById("pdf-preview-download-link");
@@ -101,10 +101,30 @@ function setStatus(text, tone = "info") {
 }
 
 function syncViewButton() {
-  if (!viewBtn) return;
+  if (!toggleBtn) return;
   const ok = canPreview();
-  viewBtn.disabled = !ok;
-  viewBtn.title = ok ? "Show inline PDF preview" : "Save a PDF to this paper or choose a PDF file above.";
+  toggleBtn.disabled = !ok;
+  toggleBtn.title = ok ? "" : "Save a PDF to this paper or choose a PDF file above.";
+}
+
+function setExpandedUi(isExpanded) {
+  if (panelEl) {
+    panelEl.classList.toggle("read-papers-pdf-preview--expanded", isExpanded);
+  }
+  if (headMetaEl) {
+    headMetaEl.hidden = !isExpanded;
+  }
+  if (previewBodyEl) {
+    previewBodyEl.hidden = !isExpanded;
+  }
+  if (toggleBtn) {
+    toggleBtn.textContent = isExpanded ? "Show Less" : "View PDF";
+    toggleBtn.setAttribute("aria-expanded", isExpanded ? "true" : "false");
+  }
+}
+
+function isPreviewExpanded() {
+  return Boolean(previewBodyEl && !previewBodyEl.hidden);
 }
 
 function updateZoomLabel() {
@@ -239,8 +259,7 @@ function setDownloadUi(filename, href) {
 async function expandAndLoad() {
   if (!canPreview()) return;
 
-  collapsedEl.hidden = true;
-  expandedEl.hidden = false;
+  setExpandedUi(true);
   setStatus("Loading PDF…", "info");
 
   try {
@@ -276,8 +295,7 @@ async function expandAndLoad() {
 }
 
 async function collapse() {
-  collapsedEl.hidden = false;
-  expandedEl.hidden = true;
+  setExpandedUi(false);
   setStatus("", "info");
   await teardownPdf();
   setDownloadUi("", "");
@@ -293,17 +311,17 @@ function onContextChanged(ev) {
     pdfDisplayName: String(d.pdfDisplayName || "").trim(),
   };
   syncViewButton();
-  if (!expandedEl.hidden && !canPreview()) {
+  if (isPreviewExpanded() && !canPreview()) {
     void collapse();
   }
 }
 
-viewBtn?.addEventListener("click", () => {
-  void expandAndLoad();
-});
-
-showLessBtn?.addEventListener("click", () => {
-  void collapse();
+toggleBtn?.addEventListener("click", () => {
+  if (isPreviewExpanded()) {
+    void collapse();
+  } else {
+    void expandAndLoad();
+  }
 });
 
 pagePrev?.addEventListener("click", async () => {
