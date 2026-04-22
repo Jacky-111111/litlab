@@ -3,15 +3,20 @@ const authFormEl = document.getElementById("auth-form");
 const modeSwitchEl = document.getElementById("mode-switch");
 const modeTitleEl = document.getElementById("auth-mode-title");
 const submitButtonEl = document.getElementById("auth-submit");
-const logoutButtonEl = document.getElementById("logout-btn");
-const startButtonEl = document.getElementById("start-btn");
 
 let authMode = "login";
 let supabaseClient = null;
+let hasRedirectedAfterAuth = false;
 
 function setAuthMessage(message, tone = "info") {
+  if (!message) {
+    authMessageEl.textContent = "";
+    authMessageEl.hidden = true;
+    return;
+  }
   authMessageEl.textContent = message;
   authMessageEl.className = `message ${tone}`;
+  authMessageEl.hidden = false;
 }
 
 function getSafeNextPath() {
@@ -28,10 +33,11 @@ function getSafeNextPath() {
   }
 }
 
-function redirectToNextIfProvided() {
+function redirectAfterAuth() {
+  if (hasRedirectedAfterAuth) return true;
+  hasRedirectedAfterAuth = true;
   const next = getSafeNextPath();
-  if (!next) return false;
-  window.location.href = next;
+  window.location.href = next || "dashboard.html";
   return true;
 }
 
@@ -44,19 +50,6 @@ function updateModeUi() {
     : "Already have an account? Sign in";
 }
 
-function bindLoggedInState() {
-  const email = localStorage.getItem("litlab_user_email");
-  if (email) {
-    startButtonEl.hidden = false;
-    logoutButtonEl.hidden = false;
-    setAuthMessage(`Signed in as ${email}`, "success");
-    if (redirectToNextIfProvided()) return;
-  } else {
-    startButtonEl.hidden = true;
-    logoutButtonEl.hidden = true;
-  }
-}
-
 async function initializeAuth() {
   try {
     supabaseClient = window.LitLab.initSupabaseClient();
@@ -67,6 +60,8 @@ async function initializeAuth() {
       if (existingSession.user?.email) {
         localStorage.setItem("litlab_user_email", existingSession.user.email);
       }
+      redirectAfterAuth();
+      return;
     }
 
     supabaseClient.auth.onAuthStateChange((_event, session) => {
@@ -75,21 +70,21 @@ async function initializeAuth() {
         if (session.user?.email) {
           localStorage.setItem("litlab_user_email", session.user.email);
         }
+        redirectAfterAuth();
       } else {
         window.LitLab.signOutLocal();
       }
-      bindLoggedInState();
     });
-    setAuthMessage("Enter your credentials to continue.");
   } catch (error) {
     setAuthMessage(error.message, "warning");
   }
-  bindLoggedInState();
 }
 
 modeSwitchEl.addEventListener("click", () => {
   authMode = authMode === "login" ? "signup" : "login";
   updateModeUi();
+  authFormEl.reset();
+  setAuthMessage("");
 });
 
 authFormEl.addEventListener("submit", async (event) => {
@@ -116,13 +111,39 @@ authFormEl.addEventListener("submit", async (event) => {
         : await supabaseClient.auth.signUp({ email, password });
 
     if (authResponse.error) {
+      const normalized = (authResponse.error.message || "").toLowerCase();
+      if (
+        authMode === "signup" &&
+        (normalized.includes("already registered") ||
+          normalized.includes("already exists") ||
+          normalized.includes("user already"))
+      ) {
+        setAuthMessage(
+          "An account with this email already exists. Please sign in instead.",
+          "error"
+        );
+        return;
+      }
       throw authResponse.error;
+    }
+
+    if (authMode === "signup") {
+      // When email confirmation is enabled, Supabase returns a fake success for
+      // duplicate emails (to prevent user enumeration) but with empty identities.
+      const identities = authResponse.data?.user?.identities;
+      if (Array.isArray(identities) && identities.length === 0) {
+        setAuthMessage(
+          "An account with this email already exists. Please sign in instead.",
+          "error"
+        );
+        return;
+      }
     }
 
     const session = authResponse.data?.session;
     if (!session?.access_token) {
       setAuthMessage(
-        "Sign-up successful. Check your email if verification is enabled, then log in.",
+        "Sign-up successful. Check your email if verification is enabled, then sign in.",
         "success"
       );
       return;
@@ -130,24 +151,11 @@ authFormEl.addEventListener("submit", async (event) => {
 
     localStorage.setItem("litlab_access_token", session.access_token);
     localStorage.setItem("litlab_user_email", session.user?.email || email);
-    setAuthMessage("Signed in successfully.", "success");
-    bindLoggedInState();
-    if (redirectToNextIfProvided()) return;
+    setAuthMessage("Signed in successfully. Redirecting...", "success");
+    redirectAfterAuth();
   } catch (error) {
     setAuthMessage(error.message || "Authentication failed.", "error");
   }
-});
-
-logoutButtonEl.addEventListener("click", async () => {
-  if (supabaseClient) {
-    await supabaseClient.auth.signOut();
-  }
-  window.LitLab.signOutLocal();
-  window.location.reload();
-});
-
-startButtonEl.addEventListener("click", () => {
-  window.location.href = "dashboard.html";
 });
 
 updateModeUi();

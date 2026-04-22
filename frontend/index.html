@@ -36,9 +36,9 @@
         </article>
 
         <article class="panel portal-auth">
-          <h2 id="auth-mode-title">Log in to LitLab</h2>
+          <h2 id="auth-mode-title">Sign in to LitLab</h2>
           <p class="auth-subtitle muted">Sign in with your email to continue.</p>
-          <p id="auth-message" class="message info">Enter your credentials to continue.</p>
+          <p id="auth-message" class="message info" hidden></p>
           <form id="auth-form">
             <label>
               Email
@@ -49,14 +49,10 @@
               <input type="password" name="password" required />
             </label>
             <div class="inline-actions">
-              <button id="auth-submit" type="submit">Log In</button>
-              <button class="secondary" id="mode-switch" type="button">Need an account? Sign up</button>
+              <button id="auth-submit" type="submit">Sign In</button>
+              <button class="secondary" id="mode-switch" type="button">Need an account? Create one</button>
             </div>
           </form>
-          <div class="inline-actions">
-            <button id="start-btn" type="button" hidden>Open Dashboard</button>
-            <button id="logout-btn" type="button" class="danger" hidden>Log Out</button>
-          </div>
         </article>
       </section>
     </main>
