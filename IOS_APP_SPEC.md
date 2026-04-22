@@ -70,8 +70,7 @@ enum AppConfig {
 
     // Backend API base. Production is same-origin `/api` on Vercel, but
     // the iOS client always needs an absolute URL.
-    // Replace with the real deployed URL once known.
-    static let apiBaseURL       = URL(string: "https://<your-litlab-vercel-domain>/api")!
+    static let apiBaseURL       = URL(string: "https://litlab-delta.vercel.app/api")!
 
     // For local development against `./backend/run_dev.sh` on the same LAN:
     // static let apiBaseURL = URL(string: "http://<mac-lan-ip>:5500/api")!
@@ -80,8 +79,8 @@ enum AppConfig {
 
 > The web app's public Supabase URL + anon key live in
 > `frontend/config.js` in the LitLab repo. Reuse the **same values** on iOS.
-> The `apiBaseURL` must be the deployed domain (e.g. `https://litlab.app/api`),
-> since iOS can't resolve `/api` like the browser does.
+> The production backend is deployed at `https://litlab-delta.vercel.app`
+> and all API calls hit `https://litlab-delta.vercel.app/api/...`.
 
 ### App Transport Security
 
@@ -242,7 +241,7 @@ strictness is not worth the bug surface for v1.
 
 ## 7. Backend endpoints used by iOS v1
 
-Base URL: `AppConfig.apiBaseURL` (e.g. `https://<host>/api`).
+Base URL: `AppConfig.apiBaseURL` = `https://litlab-delta.vercel.app/api`.
 All of these exist already in the backend — no backend changes required.
 
 All require `Authorization: Bearer <access_token>` unless noted.
@@ -422,6 +421,8 @@ Below the card:
 
 - "Sign Out" destructive button → `auth.signOut()` → back to Login.
 - Small footer text: `LitLab iOS v1 · © 2026`.
+- A small debug caption showing the backend host
+  (`litlab-delta.vercel.app`) is acceptable while the app is in TestFlight.
 
 Loading state: skeleton placeholders for the 4 rows.
 Error state: "Couldn't load your profile. Pull to retry."
@@ -468,21 +469,218 @@ v1.
 
 ---
 
-## 10. UX details
+## 10. Design system (MUST match the web app)
 
-- Match the LitLab web palette: primary blue accent (`#2563eb` works), near-
-  black text on near-white background, generous spacing. Dark mode must look
-  correct out of the box — only use semantic `Color`s (`.primary`, `.secondary`,
-  `.background`) except for the one accent color.
-- Loading: `ProgressView()` centered, ~200ms debounce before showing it so
-  fast responses don't flash a spinner.
-- Errors: inline `Text` in `.red` with a "Retry" button. Never use `Alert`
-  for network errors on list screens.
-- Pull-to-refresh on every list (`.refreshable { await vm.reload() }`).
-- Empty states: one `Text` headline + one short caption, centered.
-- `ScrollView` + `LazyVStack` for list screens (not `List`) so the accent
-  color and spacing match the web brand — except the Account screen, which
-  can use `Form`/`List` for a native-feeling profile layout.
+The iOS app is a direct visual sibling of the LitLab web app. All tokens
+below are lifted verbatim from `frontend/styles.css` — **do not invent new
+colors, radii, or shadows**. If something isn't covered here, pick the closest
+token, don't make up a new one.
+
+### 10.1 Color tokens
+
+Create a single `LitLabTheme.swift` that exposes every token as a computed
+`Color` so that light/dark values are picked automatically.
+
+| Token                | Light          | Dark           | Used for                           |
+|----------------------|----------------|----------------|------------------------------------|
+| `bg`                 | `#F6F8FC`      | `#0F1420`      | App background                     |
+| `surface`            | `#FFFFFF`      | `#161D2B`      | Cards, list rows, nav bars         |
+| `surfaceSoft`        | `#FBFCFF`      | `#1B2435`      | Subtle panels, segmented bg        |
+| `text`               | `#131722`      | `#E8EDF7`      | Primary text                       |
+| `muted`              | `#5D6579`      | `#A7B2C9`      | Secondary text, captions           |
+| `primary` (accent)   | `#2158D9`      | `#5C8FFF`      | Buttons, links, selected states    |
+| `primarySoft`        | `#E7EFFF`      | `#22365F`      | Pills, chip backgrounds, hover bg  |
+| `danger`             | `#C8354E`      | `#E0536D`      | Sign-out button, destructive text  |
+| `border`             | `#DDE4F2`      | `#2A3550`      | Hairlines, card borders            |
+| `infoBg` / `infoText`     | `#EDF2FF` / `#2C4376` | `#1F2E53` / `#C9D9FF` | Info banners                |
+| `successBg` / `successText` | `#E8F9EF` / `#1E6D41` | `#17362A` / `#A9F0CD` | Success toast (rare in v1)  |
+| `warningBg` / `warningText` | `#FFF5DB` / `#885B00` | `#4A3512` / `#FFE4A4` | Warning banners             |
+| `errorBg` / `errorText`     | `#FFE9EE` / `#9F1F39` | `#4D1F29` / `#FFC4CF` | Error banners               |
+
+Recommended SwiftUI snippet (iOS 17):
+
+```swift
+extension Color {
+    static let litlabBg           = Color(light: 0xF6F8FC, dark: 0x0F1420)
+    static let litlabSurface      = Color(light: 0xFFFFFF, dark: 0x161D2B)
+    static let litlabSurfaceSoft  = Color(light: 0xFBFCFF, dark: 0x1B2435)
+    static let litlabText         = Color(light: 0x131722, dark: 0xE8EDF7)
+    static let litlabMuted        = Color(light: 0x5D6579, dark: 0xA7B2C9)
+    static let litlabPrimary      = Color(light: 0x2158D9, dark: 0x5C8FFF)
+    static let litlabPrimarySoft  = Color(light: 0xE7EFFF, dark: 0x22365F)
+    static let litlabDanger       = Color(light: 0xC8354E, dark: 0xE0536D)
+    static let litlabBorder       = Color(light: 0xDDE4F2, dark: 0x2A3550)
+}
+
+extension Color {
+    init(light: UInt, dark: UInt) {
+        self = Color(UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor(hex: dark) : UIColor(hex: light)
+        })
+    }
+}
+```
+
+Set the app-wide accent via `.tint(.litlabPrimary)` at the root of
+`LitLabiOSApp`. That propagates to `TabView` selected icon, buttons, links,
+`ProgressView`, toggles, etc.
+
+### 10.2 Typography
+
+The web brand uses **Inter**. Ship Inter with the app (variable font TTF
+dropped into the bundle + `UIAppFonts` in Info.plist). If Inter is missing
+for any reason, fall back to SF Pro (`.system`). Never mix fonts per screen.
+
+| Role         | Font           | Size / Weight            | Swift                                    |
+|--------------|----------------|--------------------------|------------------------------------------|
+| Brand wordmark (nav title) | Inter 800 | 22 pt              | `.font(.inter(.extraBold, 22))`          |
+| Screen title | Inter 700      | 28 pt (large), 20 (inline) | `.font(.inter(.bold, 28))`             |
+| Card title   | Inter 700      | 17 pt                    | `.font(.inter(.bold, 17))`               |
+| Body         | Inter 400      | 15 pt, line 1.5          | `.font(.inter(.regular, 15))`            |
+| Secondary / caption | Inter 400 | 13 pt, `litlabMuted`   | `.font(.inter(.regular, 13))`            |
+| Button label | Inter 600      | 15 pt                    | `.font(.inter(.semibold, 15))`           |
+| Monospace (user_id, citation) | SF Mono | 13 pt              | `.font(.system(.footnote, design: .monospaced))` |
+
+Line height: 1.45–1.6 for body text. Never use `.font(.largeTitle)` raw —
+always go through the scale above.
+
+### 10.3 Spacing, radius, and elevation
+
+Web tokens: `--radius: 14px`, `--shadow: 0 8px 24px rgba(20,30,60,0.08)`.
+
+Use a 4-pt grid. Approved spacings: `4, 8, 12, 16, 20, 24, 32, 40`. Nothing
+else.
+
+| Element              | Corner radius | Padding                          | Shadow                                    |
+|----------------------|---------------|----------------------------------|-------------------------------------------|
+| Card / panel         | 14            | 16                               | `y 8, blur 24, opacity 0.08` (light only) |
+| List row             | 12            | h 16, v 12                       | none — rely on card container             |
+| Button (primary)     | 10            | h 16, v 12 (44 pt min tap height)| none                                      |
+| Button (secondary)   | 10            | h 16, v 12                       | 1 px `litlabBorder` stroke                |
+| Segmented control    | 12            | 4                                | none                                      |
+| Pill / chip (framework) | 999 (capsule) | h 10, v 4                     | none                                      |
+| Text input           | 10            | h 12, v 10                       | 1 px `litlabBorder` stroke                |
+
+Dark mode disables the soft shadow (web uses `0 10px 30px rgba(0,0,0,0.35)`,
+but on iOS it usually looks muddy — skip shadow in dark mode and rely on the
+`litlabBorder` hairline instead).
+
+### 10.4 Component recipes
+
+**Card** (used for every content grouping on every screen):
+
+```swift
+struct LitLabCard<Content: View>: View {
+    @ViewBuilder var content: Content
+    @Environment(\.colorScheme) private var scheme
+    var body: some View {
+        content
+            .padding(16)
+            .background(Color.litlabSurface)
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(Color.litlabBorder, lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .shadow(color: scheme == .dark ? .clear
+                                           : Color(red: 0.08, green: 0.12, blue: 0.24, opacity: 0.08),
+                    radius: 12, x: 0, y: 8)
+    }
+}
+```
+
+**Primary button**: background `litlabPrimary`, label white, radius 10,
+min-height 44. Pressed state: darken background by ~12% (web uses `#1C4CC0`,
+so hardcode that as `litlabPrimaryPressed = 0x1C4CC0 / 0x4677E6`).
+
+**Secondary button**: clear background, `litlabPrimary` label + 1 px
+`litlabPrimary` stroke. Pressed: `litlabPrimarySoft` background.
+
+**Destructive button** (only Sign Out): `litlabDanger` background, white
+label. No other destructive actions in v1.
+
+**Framework pill**: capsule, `litlabPrimarySoft` background, `litlabPrimary`
+text, 13 pt semibold, inset 10/4.
+
+**Paper row**:
+
+```
+┌──────────────────────────────────────────────┐
+│ {nickname or title}                          │  ← 15 pt, semibold, litlabText
+│ {authors.prefix(3).joined(", ")} · {year}    │  ← 13 pt, litlabMuted
+└──────────────────────────────────────────────┘
+```
+
+Dividers between rows use a 1 px line in `litlabBorder`. No chevrons on
+right — the whole row is tappable and SwiftUI's `NavigationLink` arrow is
+fine.
+
+**Empty state**: a centered SF Symbol (40 pt, `litlabMuted`), a 17 pt bold
+`litlabText` headline, and a 14 pt `litlabMuted` caption below. Choose
+symbols that match: `books.vertical` (library empty), `folder.badge.questionmark`
+(projects empty), `tray` (collection empty).
+
+### 10.5 Global UI behaviors
+
+- Root view sets `.tint(.litlabPrimary)` and
+  `.background(Color.litlabBg.ignoresSafeArea())`.
+- Use `ScrollView { LazyVStack(spacing: 12) { … } }` for content lists
+  (wrapped in `LitLabCard`s) so spacing & color match the web cards.
+  Exception: `AccountView` may use `Form { Section { … } }` with
+  `.scrollContentBackground(.hidden)` + `.background(Color.litlabBg)` to keep
+  native feel while matching the palette.
+- `TabView` items use SF Symbols listed in §8, tinted by the accent token.
+  Set `UITabBar.appearance().backgroundColor = UIColor(Color.litlabSurface)`
+  in `init()` of the app struct.
+- `NavigationStack` titles: `.navigationTitle(...)` with
+  `.navigationBarTitleDisplayMode(.inline)` on detail screens, `.large` on
+  tab root screens.
+- Navigation bar background: `.toolbarBackground(Color.litlabSurface, for: .navigationBar)`
+  and `.toolbarBackground(.visible, for: .navigationBar)`.
+- **Loading**: centered `ProgressView().tint(.litlabPrimary)`, ~200 ms
+  debounce before showing so fast responses don't flash a spinner.
+- **Errors**: inline banner using `errorBg`/`errorText` tokens with a
+  `Retry` secondary button. Never use `Alert` for network errors on list
+  screens. Alerts are reserved for Sign Out confirmation.
+- **Pull-to-refresh**: `.refreshable { await vm.reload() }` on every list.
+- Haptics: `UIImpactFeedbackGenerator(style: .light)` on tab change and on
+  successful sign-in. No haptics on failures.
+- Animations: use `.animation(.smooth, value: ...)` on state transitions —
+  do not chain manual springs. Keep it calm; LitLab is a reading app.
+
+### 10.6 Screen-by-screen visual notes
+
+- **LoginView**: centered `LitLabCard` on `litlabBg`. Brand wordmark
+  "LitLab" at top in Inter ExtraBold 28 pt, `litlabPrimary`. Two rounded
+  text fields, then a primary button. Error banner slides in above the
+  button when auth fails.
+- **LibraryHomeView**: custom segmented control (capsule background in
+  `litlabSurfaceSoft`, selected pill in `litlabPrimary` with white label) —
+  do NOT use `Picker(.segmented)` because its color API is too limited for
+  brand parity.
+- **CollectionListView**: each collection is a `LitLabCard` showing title
+  (17 pt bold), description (14 pt muted, max 2 lines), and a right-aligned
+  `chevron.right` symbol in `litlabMuted`.
+- **PaperListView**: a single `LitLabCard` that contains a `LazyVStack` of
+  paper rows separated by 1 px `litlabBorder` dividers. Feels like one panel.
+- **PaperDetailView**: stacked `LitLabCard`s — "Overview" (title, authors,
+  year/source), "Abstract", "Cite" (APA block in monospaced 13 pt inside a
+  `litlabSurfaceSoft` box with 10 pt radius). "View source" is a secondary
+  button at the bottom.
+- **ProjectListView**: each row is a `LitLabCard` with the project title
+  (17 pt bold), a framework pill right below, and a small
+  `Updated 3d ago` caption in `litlabMuted` on the right.
+- **ProjectSpaceView**: first `LitLabCard` = project header (title, pill,
+  description, goal). Second card = "Framework Guidance" with a short intro
+  and a `DisclosureGroup` per section (section title bold, explanation
+  muted, prompt rendered in `litlabSurfaceSoft` sub-box with italic). Third
+  card = "Papers in this project" — same row style as Library.
+- **AccountView**: one `LitLabCard` listing the 4 profile fields with
+  label-on-left / value-on-right layout (label in `litlabMuted` 13 pt,
+  value in `litlabText` 15 pt; `user_id` is monospaced footnote). Sign Out
+  is a destructive button at the bottom, outside the card, with 24 pt
+  spacing above it.
 
 ---
 
