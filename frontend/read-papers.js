@@ -43,6 +43,21 @@ function setMessage(text, tone = "info") {
   messageEl.className = `message ${tone}`;
 }
 
+function notifyPdfPreviewContext() {
+  const paperId = String(currentPaperId || "").trim();
+  const hasStoredPdf =
+    Boolean(String(currentPaperData?.pdf_storage_path || "").trim()) && Boolean(paperId);
+  const localFile = pdfInputEl.files && pdfInputEl.files.length ? pdfInputEl.files[0] : null;
+  const pdfDisplayName = String(
+    (currentPaperData && (currentPaperData.nickname || currentPaperData.title || "").trim()) || ""
+  );
+  document.dispatchEvent(
+    new CustomEvent("litlab:paper-context-changed", {
+      detail: { paperId, hasStoredPdf, localFile, pdfDisplayName },
+    })
+  );
+}
+
 function paperCardTemplate(paper) {
   const authors = (paper.authors || []).join(", ") || "Unknown author";
   const abstract = paper.abstract || "No abstract available.";
@@ -90,6 +105,7 @@ function renderPaperMeta(paper) {
   `;
   renderSavedSourceInfo(paper);
   refreshLibraryControls();
+  notifyPdfPreviewContext();
 }
 
 function renderSavedSourceInfo(paper) {
@@ -120,6 +136,7 @@ function applyPaperLibraryState(paperId, collectionIds = []) {
   }
   syncCollectionSelectionToUi(currentCollectionIds);
   refreshLibraryControls();
+  notifyPdfPreviewContext();
 }
 
 function renderPaperNote(notePayload) {
@@ -384,6 +401,7 @@ choosePdfBtn.addEventListener("click", () => {
 pdfInputEl.addEventListener("change", () => {
   const file = pdfInputEl.files && pdfInputEl.files.length ? pdfInputEl.files[0] : null;
   selectedPdfNameEl.textContent = file ? file.name : "No file chosen";
+  notifyPdfPreviewContext();
 });
 
 function isPdfFile(file) {
@@ -964,3 +982,4 @@ if (presetPaperId) {
 
 refreshLibraryControls();
 loadCollections();
+notifyPdfPreviewContext();

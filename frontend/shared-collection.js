@@ -87,9 +87,15 @@ async function sharedFetch(slug) {
   return response.json();
 }
 
+function hideDeniedPanel() {
+  if (!deniedPanelEl) return;
+  deniedPanelEl.hidden = true;
+  deniedPanelEl.style.display = "none";
+}
+
 function hideAllPanels() {
   if (loadingPanelEl) loadingPanelEl.hidden = true;
-  if (deniedPanelEl) deniedPanelEl.hidden = true;
+  hideDeniedPanel();
   if (grantedPanelEl) grantedPanelEl.hidden = true;
 }
 
@@ -100,7 +106,10 @@ function showLoading() {
 
 function showDenied({ title, body, actionsHtml }) {
   hideAllPanels();
-  if (deniedPanelEl) deniedPanelEl.hidden = false;
+  if (deniedPanelEl) {
+    deniedPanelEl.style.removeProperty("display");
+    deniedPanelEl.hidden = false;
+  }
   if (deniedTitleEl) deniedTitleEl.textContent = title;
   if (deniedBodyEl) deniedBodyEl.textContent = body;
   if (deniedActionsEl) deniedActionsEl.innerHTML = actionsHtml || "";
@@ -131,6 +140,7 @@ function paperRowTemplate(paper) {
 
 function renderGranted(data) {
   hideAllPanels();
+  hideDeniedPanel();
   if (grantedPanelEl) grantedPanelEl.hidden = false;
 
   const collection = data.collection || {};
