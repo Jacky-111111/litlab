@@ -786,6 +786,19 @@ label {
   top: 90px;
 }
 
+.paper-source-panel {
+  transition:
+    box-shadow 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.paper-source-panel.paper-source--drag-over {
+  background-color: var(--primary-soft);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-soft), var(--shadow);
+}
+
 .read-papers-content .panel {
   scroll-margin-top: 96px;
 }

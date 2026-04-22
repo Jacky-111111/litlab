@@ -6,6 +6,7 @@ const pdfInputEl = document.getElementById("paper-pdf-input");
 const choosePdfBtn = document.getElementById("choose-pdf-btn");
 const selectedPdfNameEl = document.getElementById("selected-pdf-name");
 const analyzePaperBtn = document.getElementById("analyze-paper-btn");
+const paperSourcePanelEl = document.getElementById("paper-source-panel");
 const savedSourceInfoEl = document.getElementById("saved-source-info");
 const messageEl = document.getElementById("read-papers-message");
 const paperMetaEl = document.getElementById("paper-meta");
@@ -384,6 +385,112 @@ pdfInputEl.addEventListener("change", () => {
   const file = pdfInputEl.files && pdfInputEl.files.length ? pdfInputEl.files[0] : null;
   selectedPdfNameEl.textContent = file ? file.name : "No file chosen";
 });
+
+function isPdfFile(file) {
+  if (!(file instanceof File)) return false;
+  const name = String(file.name || "").toLowerCase();
+  return file.type === "application/pdf" || name.endsWith(".pdf");
+}
+
+function extractHttpUrlFromDataTransfer(dataTransfer) {
+  if (!dataTransfer) return "";
+  const uriList = dataTransfer.getData("text/uri-list") || "";
+  const uriLine = uriList
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .find((line) => line && !line.startsWith("#"));
+  if (uriLine) {
+    try {
+      const parsed = new URL(uriLine);
+      if (parsed.protocol === "http:" || parsed.protocol === "https:") return parsed.href;
+    } catch (_err) {
+      // fall through
+    }
+  }
+  const plain = (dataTransfer.getData("text/plain") || "").trim();
+  if (!plain) return "";
+  const firstLine = plain.split(/\r?\n/)[0].trim();
+  try {
+    const parsed = new URL(firstLine);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") return parsed.href;
+  } catch (_err) {
+    return "";
+  }
+  return "";
+}
+
+function setPaperSourceDragHighlight(on) {
+  if (!paperSourcePanelEl) return;
+  paperSourcePanelEl.classList.toggle("paper-source--drag-over", Boolean(on));
+}
+
+if (paperSourcePanelEl) {
+  paperSourcePanelEl.addEventListener("dragenter", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setPaperSourceDragHighlight(true);
+  });
+
+  paperSourcePanelEl.addEventListener("dragleave", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (
+      event.relatedTarget instanceof Node &&
+      paperSourcePanelEl.contains(event.relatedTarget)
+    ) {
+      return;
+    }
+    setPaperSourceDragHighlight(false);
+  });
+
+  paperSourcePanelEl.addEventListener("dragover", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = "copy";
+    }
+  });
+
+  paperSourcePanelEl.addEventListener("drop", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setPaperSourceDragHighlight(false);
+
+    const dt = event.dataTransfer;
+    if (!dt) return;
+
+    const droppedFile = dt.files && dt.files.length ? dt.files[0] : null;
+    if (droppedFile && isPdfFile(droppedFile)) {
+      try {
+        const out = new DataTransfer();
+        out.items.add(droppedFile);
+        pdfInputEl.files = out.files;
+        pdfInputEl.dispatchEvent(new Event("change", { bubbles: true }));
+        setMessage(`PDF "${droppedFile.name}" ready. Click Start Analyze when you're ready.`, "success");
+      } catch (_err) {
+        setMessage("Could not attach the dropped PDF. Try Choose File instead.", "warning");
+      }
+      return;
+    }
+    if (droppedFile && !isPdfFile(droppedFile)) {
+      setMessage("Only PDF files can be dropped here for upload.", "warning");
+      return;
+    }
+
+    const url = extractHttpUrlFromDataTransfer(dt);
+    if (url) {
+      paperUrlInputEl.value = url;
+      setMessage("URL loaded from drop. Click Start Analyze below to run analysis.", "success");
+      if (typeof paperUrlInputEl.scrollIntoView === "function") {
+        paperUrlInputEl.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      paperUrlInputEl.focus({ preventScroll: true });
+      return;
+    }
+
+    setMessage("Drop a PDF file or a web link (http/https) onto Paper Source.", "warning");
+  });
+}
 
 async function analyzeFromCurrentSource() {
   const url = String(paperUrlInputEl.value || "").trim();
