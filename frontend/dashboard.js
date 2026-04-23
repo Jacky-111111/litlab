@@ -71,26 +71,46 @@ function pluralize(count, singular, plural = `${singular}s`) {
   return `${count} ${count === 1 ? singular : plural}`;
 }
 
+function projectFrameworkDataAttr(frameworkType) {
+  const raw = String(frameworkType || "").trim();
+  if (raw === "IMRAD") return "imrad";
+  if (raw === "Review / Survey") return "review";
+  if (raw === "Theoretical Paper") return "theoretical";
+  if (raw === "Case Study") return "case-study";
+  return "other";
+}
+
 function projectCardTemplate(project, paperCount) {
   const frameworkClass = window.LitLab.getFrameworkBadgeClass(project.framework_type);
-  const description = project.description || "No description yet.";
+  const frameworkData = projectFrameworkDataAttr(project.framework_type);
+  const hasDescription = Boolean(project.description && String(project.description).trim());
+  const descriptionBlock = hasDescription
+    ? `<p class="project-card-desc">${escapeHtml(project.description)}</p>`
+    : `<p class="project-card-desc project-card-desc--empty" aria-label="No description">No description yet.</p>`;
   const goalHtml = project.goal
-    ? `<p class="muted project-card-goal"><strong>Goal:</strong> ${escapeHtml(project.goal)}</p>`
+    ? `<div class="project-card-goal-block">
+         <span class="project-card-goal-kicker">Research goal</span>
+         <p class="project-card-goal-text">${escapeHtml(project.goal)}</p>
+       </div>`
     : "";
   const countLabel =
     typeof paperCount === "number" ? pluralize(paperCount, "paper") : "… papers";
   return `
-    <article class="card project-card">
-      <div class="card-head">
-        <h3>${escapeHtml(project.title)}</h3>
-        <span class="${frameworkClass}">${escapeHtml(project.framework_type)}</span>
-      </div>
-      <p class="muted">${escapeHtml(description)}</p>
-      ${goalHtml}
-      <p class="muted project-card-stats"><span class="badge gray">${countLabel}</span></p>
-      <div class="project-actions">
-        <button data-action="open" data-id="${project.id}">Manage</button>
-        <button data-action="delete" data-id="${project.id}" class="danger">Delete</button>
+    <article class="card project-card project-card--dashboard" data-framework="${frameworkData}">
+      <div class="project-card-inner">
+        <header class="project-card-header">
+          <h3 class="project-card-title">${escapeHtml(project.title)}</h3>
+          <span class="project-card-framework ${frameworkClass}">${escapeHtml(project.framework_type)}</span>
+        </header>
+        ${descriptionBlock}
+        ${goalHtml}
+        <footer class="project-card-footer">
+          <span class="project-card-pill" title="Papers in this project’s reading lists">${countLabel}</span>
+          <div class="project-actions project-card-foot-actions">
+            <button type="button" data-action="open" data-id="${project.id}">Open</button>
+            <button type="button" data-action="delete" data-id="${project.id}" class="danger">Delete</button>
+          </div>
+        </footer>
       </div>
     </article>
   `;

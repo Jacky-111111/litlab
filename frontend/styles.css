@@ -92,8 +92,9 @@ a {
 
 .brand {
   font-weight: 800;
-  font-size: 1.45rem;
+  font-size: clamp(1.65rem, 2.4vw, 2.05rem);
   letter-spacing: 0.01em;
+  line-height: 1.15;
 }
 
 .hero {
@@ -128,6 +129,17 @@ a {
 
 .grid-2 {
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+/* Dashboard: Framework Quick Guide — always two columns (2×2), not 3+1 on wide screens. */
+.framework-quick-guide-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 520px) {
+  .framework-quick-guide-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .card,
@@ -776,7 +788,7 @@ label {
 
 .read-papers-workspace {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
   align-items: start;
   min-width: 0;
@@ -870,6 +882,7 @@ label {
 .read-papers-content {
   min-width: 0;
   max-width: 100%;
+  overflow-x: visible;
 }
 
 .paper-source-panel {
@@ -889,6 +902,188 @@ label {
   scroll-margin-top: 96px;
   max-width: 100%;
   box-sizing: border-box;
+}
+
+/* Flex wrapper stays main column width; wide shell overflows visually without widening sibling rows. */
+.read-papers-analysis-breakout {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: visible;
+  display: flex;
+  justify-content: center;
+}
+
+.read-papers-analysis-shell {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0.45rem;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Same two-column rhythm as .read-papers-top-row: 1fr | 1rem gap | 1fr — gutter lines up with Paper Source / Library. */
+.read-papers-analysis-shell.read-papers-analysis-shell--open {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: stretch;
+  width: min(2264px, 98vw);
+  max-width: 98vw;
+  flex: 0 0 auto;
+}
+
+.read-papers-analysis-left-cluster {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.read-papers-analysis-shell:not(.read-papers-analysis-shell--open) .read-papers-analysis-left-cluster {
+  flex: 0 0 auto;
+}
+
+.read-papers-analysis-shell:not(.read-papers-analysis-shell--open) .read-papers-analysis-result-column {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.read-papers-analysis-shell.read-papers-analysis-shell--open .read-papers-analysis-result-column {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  align-self: stretch;
+}
+
+.read-papers-analysis-shell.read-papers-analysis-shell--open .read-papers-analysis-result-column .panel {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+}
+
+/* Keep [hidden] on the inline panel/body effective (avoid display:flex beating UA hidden). */
+#read-papers-inline-pdf-panel[hidden] {
+  display: none !important;
+}
+
+.read-papers-analysis-shell.read-papers-analysis-shell--open .read-papers-inline-pdf-preview:not([hidden]) {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.analysis-pdf-side-tab {
+  position: relative;
+  flex-shrink: 0;
+  width: 2.35rem;
+  min-height: 7.5rem;
+  padding: 0;
+  margin: 0;
+  align-self: stretch;
+  border: 1px solid var(--primary);
+  background: var(--surface);
+  color: var(--primary);
+  border-radius: var(--radius);
+  font-weight: 600;
+  font-size: 0.74rem;
+  line-height: 1.15;
+  cursor: pointer;
+  display: block;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  box-shadow: var(--shadow);
+}
+
+.analysis-pdf-side-tab__label {
+  position: absolute;
+  top: 0.79rem;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+}
+
+.analysis-pdf-side-tab:hover:not(:disabled) {
+  background: var(--primary-soft);
+}
+
+.analysis-pdf-side-tab:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.read-papers-analysis-shell.read-papers-analysis-shell--open .analysis-pdf-side-tab {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+.read-papers-analysis-shell.read-papers-analysis-shell--open .analysis-pdf-side-tab:hover:not(:disabled) {
+  background: #1c4cc0;
+}
+
+.read-papers-inline-pdf-preview {
+  min-width: 0;
+}
+
+.read-papers-inline-pdf-preview__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  margin-bottom: 0;
+}
+
+.read-papers-inline-pdf-preview.read-papers-pdf-preview--expanded .read-papers-inline-pdf-preview__head {
+  margin-bottom: 0.75rem;
+}
+
+.read-papers-inline-pdf-preview .pdf-preview-body:not([hidden]) {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.read-papers-inline-pdf-preview .pdf-preview-stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.read-papers-inline-pdf-preview .pdf-preview-canvas-wrap {
+  flex: 1 1 auto;
+  min-height: 12rem;
+  max-height: none;
+}
+
+.read-papers-analysis-shell.read-papers-analysis-shell--open .read-papers-inline-pdf-preview .pdf-preview-canvas-wrap {
+  min-height: 0;
+}
+
+@media (max-width: 960px) {
+  .read-papers-analysis-shell.read-papers-analysis-shell--open {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 100%;
+    gap: 1rem;
+  }
+
+  .read-papers-analysis-shell.read-papers-analysis-shell--open .read-papers-inline-pdf-preview,
+  .read-papers-analysis-shell.read-papers-analysis-shell--open .read-papers-analysis-result-column {
+    max-width: 100%;
+  }
+
+  .read-papers-inline-pdf-preview .pdf-preview-canvas-wrap {
+    min-height: min(70vh, 720px);
+    flex: 0 1 auto;
+  }
 }
 
 .read-papers-pdf-preview .pdf-preview-head {
@@ -1279,6 +1474,173 @@ label {
 
 .project-card-goal {
   margin: 0.2rem 0 0;
+}
+
+/* Dashboard — project cards */
+.projects-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+  align-items: stretch;
+}
+
+@media (max-width: 720px) {
+  .projects-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+#projects-grid .project-card--dashboard {
+  --project-card-accent: var(--primary);
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 20px rgba(20, 30, 60, 0.07);
+  border-left: 3px solid var(--project-card-accent);
+  border-radius: var(--radius);
+  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+
+#projects-grid .project-card--dashboard:hover {
+  box-shadow: 0 10px 32px rgba(33, 88, 217, 0.11);
+  transform: translateY(-2px);
+  border-color: #c5d2ec;
+}
+
+#projects-grid .project-card--dashboard[data-framework="imrad"] {
+  --project-card-accent: #2158d9;
+}
+#projects-grid .project-card--dashboard[data-framework="review"] {
+  --project-card-accent: #0f7ea8;
+}
+#projects-grid .project-card--dashboard[data-framework="theoretical"] {
+  --project-card-accent: #52339f;
+}
+#projects-grid .project-card--dashboard[data-framework="case-study"] {
+  --project-card-accent: #4f5a75;
+}
+#projects-grid .project-card--dashboard[data-framework="other"] {
+  --project-card-accent: #4f5a75;
+}
+
+#projects-grid .project-card--dashboard .project-card-inner {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding: 1.2rem 1.2rem 1.05rem 1.35rem;
+  gap: 0;
+}
+
+#projects-grid .project-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+#projects-grid .project-card-title {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 800;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  flex: 1 1 11rem;
+  min-width: 0;
+  color: var(--text);
+}
+
+#projects-grid .project-card-framework {
+  flex-shrink: 0;
+  max-width: 100%;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: none;
+  line-height: 1.2;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid transparent;
+}
+
+#projects-grid .project-card-desc {
+  margin: 0 0 0.7rem;
+  font-size: 0.94rem;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+#projects-grid .project-card-desc--empty {
+  color: var(--muted);
+  font-style: italic;
+  opacity: 0.9;
+}
+
+#projects-grid .project-card-goal-block {
+  margin: 0 0 0.9rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  background: var(--primary-soft);
+  border: 1px solid var(--border);
+}
+
+:root[data-theme="dark"] #projects-grid .project-card-goal-block {
+  background: var(--primary-soft);
+  border-color: var(--border);
+}
+
+#projects-grid .project-card-goal-kicker {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--primary);
+  margin-bottom: 0.2rem;
+}
+
+#projects-grid .project-card-goal-text {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+#projects-grid .project-card-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+#projects-grid .project-card-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+#projects-grid .project-card-foot-actions {
+  margin: 0;
+  margin-top: 0;
+  gap: 0.5rem;
+}
+
+#projects-grid .project-card-foot-actions button {
+  min-height: 2.35rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
 }
 
 .mini-card {

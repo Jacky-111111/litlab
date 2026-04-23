@@ -648,6 +648,7 @@ async function analyzeFromCurrentSource() {
     if (file instanceof File) {
       pdfInputEl.value = "";
       selectedPdfNameEl.textContent = "No file chosen";
+      notifyPdfPreviewContext();
     }
   } catch (error) {
     analysisSectionsEl.innerHTML = "<p class='muted'>No analysis returned.</p>";

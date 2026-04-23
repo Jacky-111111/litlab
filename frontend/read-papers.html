@@ -36,7 +36,7 @@
       <section class="panel" id="public-search-panel">
         <h2>Discover Public Papers</h2>
         <p class="muted">
-          Search public papers (via Semantic Scholar), preview basic info, then pick one to fill the URL
+          Search public papers, preview basic info, then pick one to fill the URL
           slot below. PDF extraction still requires a direct PDF upload.
         </p>
         <div class="public-search-row">
@@ -124,37 +124,115 @@
           </section>
         </div>
 
-        <div class="read-papers-content stack">
-          <section class="panel">
-            <h2>Analysis Result</h2>
-            <div id="nickname-editor" class="mini-card" hidden>
-              <label>
-                Paper Nickname
-                <input id="paper-nickname-input" type="text" placeholder="Set a nickname for this paper" />
-              </label>
-              <div class="inline-actions">
-                <button id="save-paper-nickname-btn" type="button" class="secondary">Save Nickname</button>
-              </div>
+        <div class="read-papers-analysis-breakout">
+          <div class="read-papers-analysis-shell" id="read-papers-analysis-shell">
+            <div class="read-papers-analysis-left-cluster">
+              <button
+                type="button"
+                class="analysis-pdf-side-tab"
+                id="analysis-pdf-side-tab"
+                aria-expanded="false"
+                aria-controls="read-papers-inline-pdf-panel"
+                aria-label="View PDF beside analysis"
+                disabled
+              >
+                <span class="analysis-pdf-side-tab__label" aria-hidden="true">View PDF</span>
+              </button>
+              <section
+                class="panel read-papers-pdf-preview read-papers-inline-pdf-preview"
+                id="read-papers-inline-pdf-panel"
+                hidden
+              >
+                <div class="pdf-preview-head read-papers-inline-pdf-preview__head">
+                  <div class="pdf-preview-head-meta" data-pdf-preview="head-meta" hidden>
+                    <h2 data-pdf-preview="filename" class="pdf-preview-filename-heading">Preview</h2>
+                    <p data-pdf-preview="download-wrap" class="pdf-preview-download-wrap" hidden>
+                      <a
+                        data-pdf-preview="download-link"
+                        class="outbound-link"
+                        href="#"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      ></a>
+                    </p>
+                  </div>
+                </div>
+                <p data-pdf-preview="status" class="message info" hidden></p>
+                <div data-pdf-preview="body" class="pdf-preview-body" hidden>
+                  <div data-pdf-preview="stage" class="pdf-preview-stage">
+                    <div class="pdf-preview-toolbar" data-pdf-preview="toolbar" aria-label="PDF controls">
+                      <span class="pdf-toolbar-label">Page</span>
+                      <button type="button" class="pdf-toolbar-btn" data-pdf-preview="page-prev" aria-label="Previous page">
+                        &lt;
+                      </button>
+                      <input
+                        class="pdf-preview-page-input"
+                        data-pdf-preview="page-input"
+                        type="number"
+                        min="1"
+                        value="1"
+                        aria-label="Current page"
+                      />
+                      <button type="button" class="pdf-toolbar-btn" data-pdf-preview="page-next" aria-label="Next page">
+                        &gt;
+                      </button>
+                      <span class="pdf-toolbar-of" data-pdf-preview="page-count">of 0</span>
+                      <button type="button" class="pdf-toolbar-btn" data-pdf-preview="rotate" aria-label="Rotate">↻</button>
+                      <span class="pdf-toolbar-spacer" aria-hidden="true"></span>
+                      <button type="button" class="pdf-toolbar-btn" data-pdf-preview="zoom-out" aria-label="Zoom out">−</button>
+                      <span class="pdf-toolbar-zoom" data-pdf-preview="zoom-label">100%</span>
+                      <button type="button" class="pdf-toolbar-btn" data-pdf-preview="zoom-in" aria-label="Zoom in">+</button>
+                      <button
+                        type="button"
+                        class="pdf-toolbar-btn pdf-toolbar-fs"
+                        data-pdf-preview="fullscreen"
+                        aria-label="Full screen"
+                      >
+                        ⤢
+                      </button>
+                    </div>
+                    <div class="pdf-preview-canvas-wrap" data-pdf-preview="canvas-wrap">
+                      <canvas data-pdf-preview="canvas"></canvas>
+                    </div>
+                  </div>
+                </div>
+              </section>
             </div>
-            <div id="paper-note-editor" class="mini-card" hidden>
-              <label>
-                Personal Notes
-                <textarea id="paper-note-input" rows="4" placeholder="Write your personal notes for this paper..."></textarea>
-              </label>
-              <div class="inline-actions">
-                <button id="save-paper-note-btn" type="button" class="secondary">Save Notes</button>
-              </div>
+            <div class="read-papers-analysis-result-column">
+              <section class="panel">
+                <h2>Analysis Result</h2>
+                <div id="nickname-editor" class="mini-card" hidden>
+                  <label>
+                    Paper Nickname
+                    <input id="paper-nickname-input" type="text" placeholder="Set a nickname for this paper" />
+                  </label>
+                  <div class="inline-actions">
+                    <button id="save-paper-nickname-btn" type="button" class="secondary">Save Nickname</button>
+                  </div>
+                </div>
+                <div id="paper-note-editor" class="mini-card" hidden>
+                  <label>
+                    Personal Notes
+                    <textarea id="paper-note-input" rows="4" placeholder="Write your personal notes for this paper..."></textarea>
+                  </label>
+                  <div class="inline-actions">
+                    <button id="save-paper-note-btn" type="button" class="secondary">Save Notes</button>
+                  </div>
+                </div>
+                <div id="paper-meta" class="mini-card muted">No paper analyzed yet.</div>
+                <div id="analysis-sections" class="analysis-sections">
+                  <p class="muted">Run an analysis to see results.</p>
+                </div>
+                <details class="analysis-raw">
+                  <summary>View raw markdown</summary>
+                  <pre id="analysis-output" class="ai-output"></pre>
+                </details>
+              </section>
             </div>
-            <div id="paper-meta" class="mini-card muted">No paper analyzed yet.</div>
-            <div id="analysis-sections" class="analysis-sections">
-              <p class="muted">Run an analysis to see results.</p>
-            </div>
-            <details class="analysis-raw">
-              <summary>View raw markdown</summary>
-              <pre id="analysis-output" class="ai-output"></pre>
-            </details>
-          </section>
+          </div>
+        </div>
 
+        <div class="read-papers-content stack">
           <section class="panel">
             <h2>Related Paper Recommendations</h2>
             <p id="related-query" class="muted"></p>
@@ -192,47 +270,97 @@
 
       <section class="panel read-papers-pdf-preview" id="paper-pdf-preview-panel">
         <div class="pdf-preview-head">
-          <div class="pdf-preview-head-meta" id="pdf-preview-head-meta" hidden>
-            <h2 id="pdf-preview-filename" class="pdf-preview-filename-heading">Preview</h2>
-            <p id="pdf-preview-download-wrap" class="pdf-preview-download-wrap" hidden>
-              <a id="pdf-preview-download-link" class="outbound-link" href="#" target="_blank" rel="noopener noreferrer"></a>
+          <div class="pdf-preview-head-meta" id="pdf-preview-head-meta" data-pdf-preview="head-meta" hidden>
+            <h2 id="pdf-preview-filename" class="pdf-preview-filename-heading" data-pdf-preview="filename">Preview</h2>
+            <p id="pdf-preview-download-wrap" class="pdf-preview-download-wrap" data-pdf-preview="download-wrap" hidden>
+              <a
+                id="pdf-preview-download-link"
+                data-pdf-preview="download-link"
+                class="outbound-link"
+                href="#"
+                target="_blank"
+                rel="noopener noreferrer"
+              ></a>
             </p>
           </div>
-          <button type="button" class="secondary pdf-preview-toggle-btn" id="pdf-preview-toggle-btn" disabled>
+          <button
+            type="button"
+            class="secondary pdf-preview-toggle-btn"
+            id="pdf-preview-toggle-btn"
+            data-pdf-preview="toggle"
+            disabled
+          >
             View PDF
           </button>
         </div>
-        <p id="pdf-preview-status" class="message info" hidden></p>
-        <div id="pdf-preview-body" class="pdf-preview-body" hidden>
-          <div id="pdf-preview-stage" class="pdf-preview-stage">
+        <p id="pdf-preview-status" class="message info" data-pdf-preview="status" hidden></p>
+        <div id="pdf-preview-body" class="pdf-preview-body" data-pdf-preview="body" hidden>
+          <div id="pdf-preview-stage" class="pdf-preview-stage" data-pdf-preview="stage">
             <div class="pdf-preview-toolbar" id="pdf-preview-toolbar" aria-label="PDF controls">
               <span class="pdf-toolbar-label">Page</span>
-              <button type="button" class="pdf-toolbar-btn" id="pdf-preview-page-prev" aria-label="Previous page">
+              <button
+                type="button"
+                class="pdf-toolbar-btn"
+                id="pdf-preview-page-prev"
+                data-pdf-preview="page-prev"
+                aria-label="Previous page"
+              >
                 &lt;
               </button>
               <input
                 class="pdf-preview-page-input"
                 id="pdf-preview-page-input"
+                data-pdf-preview="page-input"
                 type="number"
                 min="1"
                 value="1"
                 aria-label="Current page"
               />
-              <button type="button" class="pdf-toolbar-btn" id="pdf-preview-page-next" aria-label="Next page">
+              <button
+                type="button"
+                class="pdf-toolbar-btn"
+                id="pdf-preview-page-next"
+                data-pdf-preview="page-next"
+                aria-label="Next page"
+              >
                 &gt;
               </button>
-              <span class="pdf-toolbar-of" id="pdf-preview-page-count">of 0</span>
-              <button type="button" class="pdf-toolbar-btn" id="pdf-preview-rotate" aria-label="Rotate">↻</button>
+              <span class="pdf-toolbar-of" id="pdf-preview-page-count" data-pdf-preview="page-count">of 0</span>
+              <button type="button" class="pdf-toolbar-btn" id="pdf-preview-rotate" data-pdf-preview="rotate" aria-label="Rotate">
+                ↻
+              </button>
               <span class="pdf-toolbar-spacer" aria-hidden="true"></span>
-              <button type="button" class="pdf-toolbar-btn" id="pdf-preview-zoom-out" aria-label="Zoom out">−</button>
-              <span class="pdf-toolbar-zoom" id="pdf-preview-zoom-label">100%</span>
-              <button type="button" class="pdf-toolbar-btn" id="pdf-preview-zoom-in" aria-label="Zoom in">+</button>
-              <button type="button" class="pdf-toolbar-btn pdf-toolbar-fs" id="pdf-preview-fullscreen" aria-label="Full screen">
+              <button
+                type="button"
+                class="pdf-toolbar-btn"
+                id="pdf-preview-zoom-out"
+                data-pdf-preview="zoom-out"
+                aria-label="Zoom out"
+              >
+                −
+              </button>
+              <span class="pdf-toolbar-zoom" id="pdf-preview-zoom-label" data-pdf-preview="zoom-label">100%</span>
+              <button
+                type="button"
+                class="pdf-toolbar-btn"
+                id="pdf-preview-zoom-in"
+                data-pdf-preview="zoom-in"
+                aria-label="Zoom in"
+              >
+                +
+              </button>
+              <button
+                type="button"
+                class="pdf-toolbar-btn pdf-toolbar-fs"
+                id="pdf-preview-fullscreen"
+                data-pdf-preview="fullscreen"
+                aria-label="Full screen"
+              >
                 ⤢
               </button>
             </div>
-            <div class="pdf-preview-canvas-wrap" id="pdf-preview-canvas-wrap">
-              <canvas id="pdf-preview-canvas"></canvas>
+            <div class="pdf-preview-canvas-wrap" id="pdf-preview-canvas-wrap" data-pdf-preview="canvas-wrap">
+              <canvas id="pdf-preview-canvas" data-pdf-preview="canvas"></canvas>
             </div>
           </div>
         </div>
