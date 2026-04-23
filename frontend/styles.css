@@ -776,15 +776,21 @@ label {
 
 .read-papers-workspace {
   display: grid;
-  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+  grid-template-columns: 1fr;
   gap: 1rem;
   align-items: start;
   min-width: 0;
 }
 
-.read-papers-controls {
-  position: sticky;
-  top: 90px;
+.read-papers-top-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+  min-width: 0;
+}
+
+.read-papers-top-row > .panel {
   min-width: 0;
 }
 
@@ -1501,12 +1507,8 @@ pre.ai-output {
     position: static;
   }
 
-  .read-papers-workspace {
+  .read-papers-top-row {
     grid-template-columns: 1fr;
-  }
-
-  .read-papers-controls {
-    position: static;
   }
 
   .dashboard-layout {
