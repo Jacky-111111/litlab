@@ -37,6 +37,7 @@ const advisorNextStepsEl = document.getElementById("advisor-next-steps");
 
 let attachedCollections = [];
 let primaryCollectionId = null;
+let projectCollectionsLoadedOk = false;
 
 let libraryPickerSource = "library";
 let libraryPickerPapers = [];
@@ -50,6 +51,54 @@ let projectSavedPapers = [];
 function setMessage(text, tone = "info") {
   projectMessageEl.textContent = text;
   projectMessageEl.className = `message ${tone}`;
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function formatDateShort(iso) {
+  if (!iso) return null;
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return null;
+    return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  } catch {
+    return null;
+  }
+}
+
+function renderProjectHero(project) {
+  const aside = document.getElementById("project-hero-aside");
+  const crumbCurrent = document.querySelector(".project-workspace-breadcrumb-current");
+  const title = (project.title || "Project").trim() || "Project";
+  if (crumbCurrent) crumbCurrent.textContent = title;
+  if (!aside) return;
+  aside.replaceChildren();
+  const wrap = document.createElement("div");
+  wrap.className = "project-hero-chips";
+  const fw = document.createElement("span");
+  fw.className = "project-hero-chip project-hero-chip--framework";
+  fw.textContent = project.framework_type || "Framework";
+  const stRaw = (project.status || "active").trim() || "active";
+  const st = document.createElement("span");
+  st.className = "project-hero-chip project-hero-chip--status";
+  st.dataset.status = stRaw;
+  st.textContent = stRaw.charAt(0).toUpperCase() + stRaw.slice(1);
+  wrap.append(fw, st);
+  const updated = formatDateShort(project.updated_at);
+  if (updated) {
+    const u = document.createElement("span");
+    u.className = "project-hero-chip project-hero-chip--meta";
+    u.textContent = `Updated ${updated}`;
+    wrap.appendChild(u);
+  }
+  aside.appendChild(wrap);
 }
 
 function notesStorageKey(sectionTitle) {
@@ -147,6 +196,7 @@ async function loadProjectDetail() {
     projectTitleText = (project.title || "Project").trim() || "Project";
     projectTitleEl.textContent = project.title;
     projectDescriptionEl.textContent = project.description || "No description provided.";
+    renderProjectHero(project);
     renderGuidance(response.framework_guidance);
     setMessage("Project loaded.", "success");
   } catch (error) {
@@ -304,34 +354,114 @@ exportBibChicagoBtn?.addEventListener("click", () => exportBibliography("chicago
 
 function renderReadingLists() {
   if (!readingListsEl) return;
+
+  const attachedIds = new Set(attachedCollections.map((c) => c.id).filter(Boolean));
+  const unattached = allCollectionsCache.filter((c) => c.id && !attachedIds.has(c.id));
+
+  const attachOptionsHtml = unattached
+    .map(
+      (c) =>
+        `<option value="${escapeHtml(c.id)}">${escapeHtml(c.title || "Untitled")}</option>`
+    )
+    .join("");
+
+  const attachRowHtml = () => {
+    if (!unattached.length) {
+      return `<p class="muted reading-lists-all-attached">Every collection in your account is already linked to this project.</p>`;
+    }
+    return `
+      <div class="reading-list-attach-row">
+        <label class="reading-list-control">
+          <span>Attach another reading list</span>
+          <select id="reading-list-attach-select" class="reading-list-select">
+            <option value="">Choose a collection…</option>
+            ${attachOptionsHtml}
+          </select>
+        </label>
+        <button type="button" class="secondary" id="reading-list-attach-btn" disabled>Attach</button>
+      </div>
+    `;
+  };
+
   if (!attachedCollections.length) {
-    readingListsEl.innerHTML =
-      "<p class='muted'>No reading lists attached to this project yet.</p>";
+    readingListsEl.innerHTML = `
+      <div class="reading-lists-controls">
+        <p class="muted">No reading lists on this project yet. Pick one of your collections to attach ${
+          unattached.length ? "(it will become the primary list)." : "— create a collection in the Library first."
+        }</p>
+        ${
+          unattached.length
+            ? `
+        <div class="reading-list-attach-row reading-list-attach-row--first">
+          <label class="reading-list-control">
+            <span>Collection to attach</span>
+            <select id="reading-list-attach-select" class="reading-list-select">
+              <option value="">Choose a collection…</option>
+              ${attachOptionsHtml}
+            </select>
+          </label>
+          <button type="button" id="reading-list-attach-btn" disabled>Attach as primary</button>
+        </div>`
+            : `<p class="muted"><a href="library.html">Open Library</a> to create a collection.</p>`
+        }
+      </div>
+    `;
     return;
   }
-  readingListsEl.innerHTML = attachedCollections
+
+  const primaryOptionsHtml = attachedCollections
+    .map((c) => {
+      const id = c.id || "";
+      const sel = c.is_primary ? " selected" : "";
+      return `<option value="${escapeHtml(id)}"${sel}>${escapeHtml(c.title || "Untitled")}</option>`;
+    })
+    .join("");
+
+  const cardsHtml = attachedCollections
     .map((collection) => {
+      const colId = collection.id || "";
       const title = collection.title || "Untitled collection";
-      const badge = collection.is_primary ? "<span class='badge primary-badge'>Primary</span>" : "";
+      const titleEsc = escapeHtml(title);
+      const idAttr = escapeHtml(colId);
+      const badge = collection.is_primary
+        ? "<span class='badge primary-badge'>Primary</span>"
+        : "";
       const description = collection.description
-        ? `<p class='muted'>${collection.description}</p>`
+        ? `<p class='muted'>${escapeHtml(collection.description)}</p>`
         : "";
       return `
-        <article class="mini-card">
-          <h4>${title} ${badge}</h4>
+        <article class="mini-card reading-list-card" data-collection-id="${idAttr}">
+          <div class="reading-list-card-head">
+            <h4>${titleEsc} ${badge}</h4>
+          </div>
           ${description}
         </article>
       `;
     })
     .join("");
+
+  readingListsEl.innerHTML = `
+    <div class="reading-lists-controls">
+      <label class="reading-list-control reading-list-control--primary">
+        <span>Primary reading list</span>
+        <select id="reading-list-primary-select" class="reading-list-select">${primaryOptionsHtml}</select>
+        <span class="reading-list-control-hint muted">New papers from this project are added here by default.</span>
+      </label>
+      ${attachRowHtml()}
+    </div>
+    <div class="reading-list-cards">${cardsHtml}</div>
+  `;
 }
 
 async function loadAttachedCollections() {
+  if (!projectId) return;
+  projectCollectionsLoadedOk = false;
   try {
     const response = await window.LitLab.apiFetch(`/projects/${projectId}/collections`);
     attachedCollections = response.collections || [];
     const primary = attachedCollections.find((collection) => collection.is_primary);
     primaryCollectionId = primary?.id || attachedCollections[0]?.id || null;
+    projectCollectionsLoadedOk = true;
     renderReadingLists();
   } catch (error) {
     attachedCollections = [];
@@ -366,6 +496,65 @@ savedPapersEl.addEventListener("click", (event) => {
   }
 });
 
+readingListsEl?.addEventListener("change", async (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLSelectElement)) return;
+  if (target.id === "reading-list-attach-select") {
+    const btn = document.getElementById("reading-list-attach-btn");
+    if (btn instanceof HTMLButtonElement) btn.disabled = !target.value;
+    return;
+  }
+  if (target.id !== "reading-list-primary-select") return;
+  const cid = target.value;
+  if (!cid) return;
+  const currentPrimary = attachedCollections.find((c) => c.is_primary)?.id;
+  if (cid === currentPrimary) return;
+  target.disabled = true;
+  try {
+    await window.LitLab.apiFetch(`/projects/${projectId}/collections`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ collection_id: cid, is_primary: true }),
+    });
+    setMessage("Primary reading list updated.", "success");
+    await loadAttachedCollections();
+  } catch (error) {
+    setMessage(error.message || "Could not update primary list.", "error");
+    renderReadingLists();
+  } finally {
+    target.disabled = false;
+  }
+});
+
+readingListsEl?.addEventListener("click", async (event) => {
+  const btn = event.target.closest("#reading-list-attach-btn");
+  if (!(btn instanceof HTMLButtonElement)) return;
+  const sel = document.getElementById("reading-list-attach-select");
+  if (!(sel instanceof HTMLSelectElement)) return;
+  const cid = sel.value;
+  if (!cid) return;
+  const makePrimary = attachedCollections.length === 0;
+  btn.disabled = true;
+  try {
+    await window.LitLab.apiFetch(`/projects/${projectId}/collections`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ collection_id: cid, is_primary: makePrimary }),
+    });
+    setMessage(
+      makePrimary ? "Reading list attached as primary." : "Reading list attached to this project.",
+      "success"
+    );
+    sel.value = "";
+    await loadAttachedCollections();
+    await loadCollectionsForPicker();
+  } catch (error) {
+    setMessage(error.message || "Could not attach collection.", "error");
+  } finally {
+    btn.disabled = !sel.value;
+  }
+});
+
 notesFormEl.addEventListener("input", (event) => {
   const target = event.target;
   if (!(target instanceof HTMLTextAreaElement)) return;
@@ -377,15 +566,6 @@ notesFormEl.addEventListener("input", (event) => {
 // ---------------------------------------------------------------------------
 // Add-papers-from-Library picker
 // ---------------------------------------------------------------------------
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
 
 function setPickerMessage(text, tone = "info") {
   if (!libraryPickerMessageEl) return;
@@ -509,6 +689,7 @@ async function loadCollectionsForPicker() {
     allCollectionsCache = [];
   }
   populatePickerSourceOptions();
+  if (projectCollectionsLoadedOk) renderReadingLists();
 }
 
 libraryPickerToggleBtn?.addEventListener("click", async () => {
@@ -782,6 +963,8 @@ window.addEventListener("resize", () => {
 });
 
 loadProjectDetail();
-loadAttachedCollections();
 loadSavedPapers();
-loadCollectionsForPicker();
+void (async () => {
+  await loadCollectionsForPicker();
+  await loadAttachedCollections();
+})();

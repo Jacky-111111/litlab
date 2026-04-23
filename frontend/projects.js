@@ -38,8 +38,6 @@ function pluralize(count, singular, plural = `${singular}s`) {
 }
 
 function projectCardTemplate(project) {
-  const frameworkClass = window.LitLab.getFrameworkBadgeClass(project.framework_type);
-  const framework = escapeHtml(project.framework_type || "");
   const description = project.description || "";
   const goal = project.goal || "";
   const status = project.status || "active";
@@ -58,30 +56,18 @@ function projectCardTemplate(project) {
     <article class="card project-card" data-project-id="${project.id}">
       <div class="card-head">
         <div class="project-row-main">
-          <h3 class="project-row-title" data-role="title-view">${escapeHtml(project.title)}</h3>
           <input
             type="text"
-            class="project-row-title-input"
+            class="project-row-title-inline"
             data-role="title-input"
             value="${escapeHtml(project.title)}"
-            hidden
+            aria-label="Project title"
           />
         </div>
-        <div class="project-row-badges">
-          <span class="${frameworkClass}">${framework}</span>
-          <span class="badge gray">${escapeHtml(status)}</span>
-          <span class="badge gray">${paperLabel}</span>
-        </div>
+        <span class="muted project-row-paper-count">${paperLabel}</span>
       </div>
 
-      <p class="muted project-row-description-view" data-role="description-view">
-        ${description ? escapeHtml(description) : "<em>No description yet.</em>"}
-      </p>
-      <p class="muted project-row-goal-view" data-role="goal-view">
-        ${goal ? `<strong>Goal:</strong> ${escapeHtml(goal)}` : "<em>No research goal set.</em>"}
-      </p>
-
-      <div class="project-edit-panel" data-role="edit-panel" hidden>
+      <div class="project-edit-panel">
         <div class="grid grid-2">
           <label>
             Framework
@@ -102,11 +88,9 @@ function projectCardTemplate(project) {
         </label>
       </div>
 
-      <div class="project-actions">
+      <div class="project-card-actions project-actions">
         <a class="button" href="project.html?id=${project.id}">Open Workspace</a>
-        <button type="button" class="secondary" data-action="edit">Edit</button>
-        <button type="button" data-action="save" hidden>Save</button>
-        <button type="button" class="secondary" data-action="cancel" hidden>Cancel</button>
+        <button type="button" data-action="save">Save changes</button>
         <button type="button" class="danger" data-action="delete">Delete</button>
       </div>
     </article>
@@ -157,18 +141,6 @@ async function loadProjects() {
   } catch (error) {
     setMessage(listMessageEl, error.message || "Could not load projects.", "error");
   }
-}
-
-function toggleEditMode(cardEl, editing) {
-  cardEl.querySelector('[data-role="title-view"]').hidden = editing;
-  cardEl.querySelector('[data-role="title-input"]').hidden = !editing;
-  cardEl.querySelector('[data-role="description-view"]').hidden = editing;
-  cardEl.querySelector('[data-role="goal-view"]').hidden = editing;
-  cardEl.querySelector('[data-role="edit-panel"]').hidden = !editing;
-  cardEl.querySelector('[data-action="edit"]').hidden = editing;
-  cardEl.querySelector('[data-action="delete"]').hidden = editing;
-  cardEl.querySelector('[data-action="save"]').hidden = !editing;
-  cardEl.querySelector('[data-action="cancel"]').hidden = !editing;
 }
 
 async function saveProject(cardEl) {
@@ -231,12 +203,7 @@ projectsGridEl.addEventListener("click", (event) => {
   if (!cardEl) return;
 
   const action = button.dataset.action;
-  if (action === "edit") {
-    toggleEditMode(cardEl, true);
-  } else if (action === "cancel") {
-    toggleEditMode(cardEl, false);
-    renderProjects();
-  } else if (action === "save") {
+  if (action === "save") {
     saveProject(cardEl);
   } else if (action === "delete") {
     deleteProject(cardEl);

@@ -21,9 +21,19 @@
     <main class="container section project-layout">
       <p id="project-message" class="message info">Preparing project view...</p>
 
-      <section class="panel">
-        <h1 id="project-title">Project</h1>
-        <p id="project-description" class="muted">Description</p>
+      <section class="panel project-workspace-hero">
+        <nav class="project-workspace-breadcrumb" aria-label="Breadcrumb">
+          <a href="dashboard.html">Dashboard</a>
+          <span aria-hidden="true">/</span>
+          <span class="project-workspace-breadcrumb-current">Project</span>
+        </nav>
+        <div class="project-workspace-hero-main">
+          <div class="project-workspace-hero-copy">
+            <h1 id="project-title">Project</h1>
+            <p id="project-description" class="muted">Description</p>
+          </div>
+          <div class="project-workspace-hero-aside" id="project-hero-aside"></div>
+        </div>
       </section>
 
       <section class="two-col">
@@ -88,8 +98,8 @@
       <section class="panel">
         <h2>Reading Lists</h2>
         <p class="muted">
-          Collections attached to this project. The primary collection is where new papers are
-          saved by default.
+          Choose which attached list is <strong>primary</strong> (default for new papers), and link
+          more lists from your Library below.
         </p>
         <div id="project-reading-lists" class="stack"></div>
       </section>

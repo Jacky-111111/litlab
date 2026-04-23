@@ -285,8 +285,8 @@ label {
 
 .portal-intro h1 {
   margin: 0;
-  font-size: clamp(2rem, 3.8vw, 3rem);
-  line-height: 1.15;
+  font-size: clamp(1.75rem, 3.2vw, 2.55rem);
+  line-height: 1.2;
 }
 
 .portal-intro p {
@@ -461,6 +461,44 @@ label {
   padding: 0.5rem 0.7rem;
 }
 
+/* Projects page: title is always editable; hover shows affordance. */
+.project-layout #projects-grid .project-row-title-inline {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 0.35rem 0.5rem;
+  background: transparent;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.project-layout #projects-grid .project-row-title-inline:hover {
+  background: var(--primary-soft);
+  border-color: rgba(37, 99, 235, 0.22);
+}
+
+.project-layout #projects-grid .project-row-title-inline:focus {
+  outline: none;
+  background: var(--surface);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
+.project-layout #projects-grid .project-row-paper-count {
+  flex-shrink: 0;
+  font-size: 0.88rem;
+  white-space: nowrap;
+}
+
 .project-row-badges {
   display: flex;
   gap: 0.4rem;
@@ -630,6 +668,183 @@ label {
 
 .project-layout > * {
   width: 100%;
+}
+
+.project-workspace-hero {
+  padding: 1.25rem 1.35rem;
+}
+
+.project-workspace-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 0.85rem;
+}
+
+.project-workspace-breadcrumb a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.project-workspace-breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.project-workspace-breadcrumb-current {
+  color: var(--text);
+  font-weight: 600;
+  max-width: min(280px, 42vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-workspace-hero-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem 1.5rem;
+}
+
+.project-workspace-hero-copy h1 {
+  margin: 0 0 0.35rem;
+  font-size: clamp(1.5rem, 3vw, 1.85rem);
+  line-height: 1.2;
+}
+
+.project-workspace-hero-copy .muted {
+  margin: 0;
+  max-width: 52ch;
+  line-height: 1.5;
+}
+
+.project-workspace-hero-aside {
+  flex: 0 1 auto;
+  min-width: min(100%, 220px);
+}
+
+.project-hero-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.project-hero-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  color: var(--muted);
+}
+
+.project-hero-chip--framework {
+  background: var(--primary-soft);
+  color: var(--primary);
+  border-color: var(--border);
+}
+
+.project-hero-chip--status[data-status="active"] {
+  background: var(--message-success-bg);
+  color: var(--message-success-text);
+  border-color: var(--border);
+}
+
+.project-hero-chip--meta {
+  font-weight: 500;
+}
+
+.reading-list-card-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+}
+
+.reading-list-card-head h4 {
+  margin: 0;
+}
+
+.reading-list-row-actions {
+  margin-top: 0.65rem;
+}
+
+.reading-list-primary-note {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+}
+
+.reading-lists-controls {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.reading-list-control {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.reading-list-control > span:first-of-type {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.reading-list-control-hint {
+  font-size: 0.8rem;
+  margin: 0;
+}
+
+.reading-list-select {
+  width: 100%;
+  max-width: min(100%, 420px);
+  padding: 0.5rem 0.65rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+.reading-list-attach-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.65rem;
+}
+
+.reading-list-attach-row .reading-list-control {
+  flex: 1 1 220px;
+  min-width: min(100%, 200px);
+}
+
+.reading-list-attach-row button {
+  flex: 0 0 auto;
+}
+
+.reading-list-cards {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.reading-lists-all-attached {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 560px) {
+  .project-hero-chips {
+    justify-content: flex-start;
+  }
 }
 
 .library-header {
@@ -1321,6 +1536,11 @@ label {
   display: flex;
   flex-wrap: wrap;
   gap: 0.55rem;
+  margin-top: 0.8rem;
+}
+
+/* Projects management page: action row under each card. */
+.project-layout #projects-grid .project-card-actions.project-actions {
   margin-top: 0.8rem;
 }
 
