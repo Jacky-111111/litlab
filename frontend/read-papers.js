@@ -18,6 +18,7 @@ const citationSectionEl = document.getElementById("citation-section");
 const citationMlaEl = document.getElementById("citation-mla");
 const citationApaEl = document.getElementById("citation-apa");
 const citationChicagoEl = document.getElementById("citation-chicago");
+const collectionsShellEl = document.getElementById("read-paper-collections-shell");
 const collectionsEl = document.getElementById("read-paper-collections");
 const persistToggleEl = document.getElementById("persist-to-library");
 const libraryMembershipStatusEl = document.getElementById("library-membership-status");
@@ -173,20 +174,21 @@ function renderPaperMeta(paper) {
 function renderSavedSourceInfo(paper) {
   const url = String(paper?.url || "").trim();
   const pdfPath = String(paper?.pdf_storage_path || "").trim();
-  const lines = [];
-  lines.push(`<p><strong>Saved URL:</strong> ${url || "Not saved"}</p>`);
-  lines.push(`<p><strong>Saved PDF:</strong> ${pdfPath || "Not saved"}</p>`);
+  const urlDisplay = url ? escapeHtml(url) : "Not saved";
+  const pdfDisplay = pdfPath ? escapeHtml(pdfPath) : "Not saved";
   const pdfButtonsDisabled = pdfPath && currentPaperId ? "" : "disabled";
-  lines.push(
-    `<div class="inline-actions">
-      <button type="button" class="secondary" data-source-action="copy-url" ${url ? "" : "disabled"}>Copy URL</button>
-      <button type="button" class="secondary" data-source-action="view-pdf" ${pdfButtonsDisabled}>View PDF</button>
-      <button type="button" class="secondary" data-source-action="download-pdf" ${pdfButtonsDisabled}>Download PDF</button>
-      <button type="button" class="secondary" data-source-action="print-pdf" ${pdfButtonsDisabled}>Print PDF</button>
-    </div>`
-  );
+  const body = `<div class="saved-source-body">
+    <p><strong>Saved URL:</strong> <span class="saved-source-value">${urlDisplay}</span></p>
+    <p><strong>Saved PDF:</strong> <span class="saved-source-value saved-pdf-path">${pdfDisplay}</span></p>
+  </div>
+  <div class="inline-actions saved-source-actions">
+    <button type="button" class="secondary" data-source-action="copy-url" ${url ? "" : "disabled"}>Copy URL</button>
+    <button type="button" class="secondary" data-source-action="view-pdf" ${pdfButtonsDisabled}>View PDF</button>
+    <button type="button" class="secondary" data-source-action="download-pdf" ${pdfButtonsDisabled}>Download PDF</button>
+    <button type="button" class="secondary" data-source-action="print-pdf" ${pdfButtonsDisabled}>Print PDF</button>
+  </div>`;
   savedSourceInfoEl.classList.remove("muted");
-  savedSourceInfoEl.innerHTML = lines.join("");
+  savedSourceInfoEl.innerHTML = body;
 }
 
 function applyPaperLibraryState(paperId, collectionIds = []) {
@@ -389,6 +391,7 @@ async function loadCollections() {
     const response = await window.LitLab.apiFetch("/collections");
     availableCollections = response.collections || [];
     if (!availableCollections.length) {
+      collectionsShellEl?.classList.remove("read-paper-collections-shell--scroll");
       collectionsEl.innerHTML = "<p class='muted'>No collections yet. Create one from a project or the Collections page.</p>";
       refreshLibraryControls();
       return;
@@ -396,17 +399,22 @@ async function loadCollections() {
     collectionsEl.innerHTML = availableCollections
       .map(
         (collection) => `
-          <label class="checkbox-inline mini-card">
+          <label class="checkbox-inline mini-card read-paper-collection-item">
             <input type="checkbox" data-role="collection-checkbox" value="${collection.id}" />
             <span>${collection.title}</span>
           </label>
         `
       )
       .join("");
+    collectionsShellEl?.classList.toggle(
+      "read-paper-collections-shell--scroll",
+      availableCollections.length > 6
+    );
     syncCollectionSelectionToUi(currentCollectionIds);
     refreshLibraryControls();
   } catch (error) {
     availableCollections = [];
+    collectionsShellEl?.classList.remove("read-paper-collections-shell--scroll");
     collectionsEl.innerHTML = `<p class='message error'>${error.message || "Could not load collections."}</p>`;
     refreshLibraryControls();
   }
@@ -547,7 +555,7 @@ if (paperSourcePanelEl) {
         out.items.add(droppedFile);
         pdfInputEl.files = out.files;
         pdfInputEl.dispatchEvent(new Event("change", { bubbles: true }));
-        setMessage(`PDF "${droppedFile.name}" ready. Click Start Analyze when you're ready.`, "success");
+        setMessage(`PDF "${droppedFile.name}" ready. Click Start AI Analyze when you're ready.`, "success");
       } catch (_err) {
         setMessage("Could not attach the dropped PDF. Try Choose File instead.", "warning");
       }
@@ -561,7 +569,7 @@ if (paperSourcePanelEl) {
     const url = extractHttpUrlFromDataTransfer(dt);
     if (url) {
       paperUrlInputEl.value = url;
-      setMessage("URL loaded from drop. Click Start Analyze below to run analysis.", "success");
+      setMessage("URL loaded from drop. Click Start AI Analyze below to run analysis.", "success");
       if (typeof paperUrlInputEl.scrollIntoView === "function") {
         paperUrlInputEl.scrollIntoView({ behavior: "smooth", block: "center" });
       }
@@ -1038,7 +1046,7 @@ publicSearchResultsEl.addEventListener("click", (event) => {
   publicSearchSelectedId = card ? card.getAttribute("data-result-key") || "" : "";
   highlightSelectedPublicResult();
   setMessage(
-    `URL loaded${title ? `: ${title}` : ""}. Click "Start Analyze" below to add it to your library.`,
+    `URL loaded${title ? `: ${title}` : ""}. Click "Start AI Analyze" below to add it to your library.`,
     "success"
   );
   setPublicSearchStatus(

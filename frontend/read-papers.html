@@ -60,15 +60,22 @@
               Use URL or PDF upload here — you can also drop a PDF or a link onto this card. Saved URL/PDF
               information for this paper is shown below after analysis.
             </p>
-            <div class="two-col">
+            <div class="two-col paper-source-two-col">
               <div>
-                <label>
+                <label class="paper-source-field">
                   Paper URL
-                  <input id="paper-url-input" type="url" placeholder="https://arxiv.org/abs/..." />
+                  <div class="paper-source-url-row">
+                    <input
+                      id="paper-url-input"
+                      class="paper-source-url-input"
+                      type="url"
+                      placeholder="https://arxiv.org/abs/..."
+                    />
+                    <button id="save-paper-url-btn" type="button" class="secondary paper-source-save-url-btn">
+                      Save URL
+                    </button>
+                  </div>
                 </label>
-                <div class="inline-actions">
-                  <button id="save-paper-url-btn" type="button" class="secondary">Save URL</button>
-                </div>
               </div>
               <div>
                 <label>
@@ -84,8 +91,10 @@
             <div id="saved-source-info" class="mini-card muted">
               Saved source URL and PDF status will appear here after analysis.
             </div>
-            <div class="inline-actions">
-              <button id="analyze-paper-btn" type="button">Start Analyze</button>
+            <div class="inline-actions paper-source-analyze-row">
+              <button id="analyze-paper-btn" type="button" class="paper-source-analyze-btn">
+                Start AI Analyze
+              </button>
             </div>
           </section>
 
@@ -101,7 +110,9 @@
             <p id="library-membership-status" class="muted">
               Save this paper to Library, then choose which collections it belongs to.
             </p>
-            <div id="read-paper-collections" class="grid grid-2"></div>
+            <div id="read-paper-collections-shell" class="read-paper-collections-shell">
+              <div id="read-paper-collections" class="read-paper-collections-grid"></div>
+            </div>
             <div class="inline-actions">
               <button id="save-library-membership-btn" type="button" class="secondary">
                 Update Collection Placement
