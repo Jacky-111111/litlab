@@ -1,0 +1,348 @@
+I used ChatGPT 5.4 Thinking mode to generate a well-designed prompt for Cursor to begin with.
+Cursor selected its model on its own.
+
+
+--------------------------------------------------------------------------------
+
+
+Initial Conversation with ChatGPT:
+
+I asked:
+I'm taking the course 15113 at CMU and I need to complete this project. [Then I pasted the homework instructions.]
+Please generate a prompt for the Cursor to start building. 
+The idea is an AI research assistant called LitLab.
+First, create a WebApp (using HTML, CSS, JS + FastAPI, Supabase for database; Vercel for server).
+Make it friendly to beginners and uses AI power to assist students in conducting research projects, generating paper ideas, project management, searching and understanding literature, modifying papers, etc.
+1. Use the OpenAI API to help analyze existing papers and create questions to test comprehension levels. I will insert the API keys later.
+2. Manage existing projects using a project system, and in the future, it can be shared with others or collaborated on. Therefore, there will be accounts and databases. During project creation, the AI will automatically recommend paper frameworks, guiding students to take research steps, filling them in, so that it is more convenient to generate papers.
+3. Collect literature. Use AI algorithms to recommend relevant papers to read and can quickly share the collection with others. Literature can be directly searched from different journals using public APIs.
+More functions will be added later.
+The color scheme can be a shade of blue combined with black and white.
+
+
+ChatGPT's answer:
+Here’s a strong Cursor dev prompt you can paste directly. I also included a shorter backup version and a suggested repo structure prompt.
+
+⸻
+
+Main Cursor Prompt
+You are my senior full-stack engineering partner. Help me build a portfolio-ready MVP for my capstone project.
+
+Project name: LitLab
+
+Goal:
+Build a beginner-friendly AI-powered research assistant web app. The app should help students start and manage research projects, search and save papers, understand papers with AI, and get structured guidance for different research writing approaches.
+
+Tech stack requirements:
+- Frontend: HTML, CSS, vanilla JavaScript
+- Backend: FastAPI (Python)
+- Database/Auth: Supabase
+- Deployment target: Vercel
+- AI: OpenAI API
+- Style: modern, clean, beginner-friendly, portfolio-ready
+- Color palette: blue + black/white, minimal and elegant
+
+Core product concept:
+LitLab is an AI research assistant for beginners. It should help users:
+1. Analyze existing papers with AI and generate comprehension questions
+2. Manage research projects in a structured way with accounts and a database
+3. Search and save papers from academic APIs, then recommend related reading
+4. Guide users through research frameworks such as:
+   - IMRAD
+   - Review / Survey
+   - Theoretical Paper
+   - Case Study
+
+MVP scope:
+Do NOT try to build everything. Focus on a clean, working MVP with these features:
+
+1. Authentication
+- Sign up / log in / log out with Supabase Auth
+- Protect user-specific data
+
+2. Project management
+- Users can create, edit, delete, and view research projects
+- Each project has:
+  - title
+  - description
+  - research type / framework
+  - created_at
+  - updated_at
+
+3. Research framework guidance
+- When a user creates a project, they choose one of:
+  - IMRAD
+  - Review / Survey
+  - Theoretical Paper
+  - Case Study
+- Show a structured checklist / guided sections for each type
+- This guidance should be thoughtfully designed and easy for beginners to follow
+
+4. Paper search
+- Add a search bar that searches academic papers using a public academic API
+- Prefer a stable API like Semantic Scholar, OpenAlex, or arXiv
+- Display results with:
+  - title
+  - authors
+  - year
+  - abstract snippet
+  - source
+  - external link if available
+
+5. Save papers to a project
+- Users can save papers from search results into a selected project
+- Each saved paper should store basic metadata in Supabase
+
+6. AI paper understanding
+- For a saved paper, users can click:
+  - “Summarize”
+  - “Explain for a beginner”
+  - “Generate quiz questions”
+- Use OpenAI API for these features
+- Quiz questions should test understanding, not just restate the abstract
+
+7. Related paper recommendations
+- For MVP, simple recommendation logic is enough
+- Example: use keywords from the saved paper title/abstract to fetch related papers
+- Keep this simple and explainable
+
+Non-goals for MVP:
+- No mobile app yet
+- No Chrome extension yet
+- No real-time collaboration yet
+- No advanced paper editing workflows yet
+- No giant feature creep
+
+Important engineering constraints:
+- Keep architecture simple and explainable for an oral exam
+- Write clean, readable code
+- Avoid overengineering
+- Include comments for important logic
+- Use environment variables for all secrets
+- Never hardcode API keys
+- Handle errors gracefully
+- Make the UI polished enough for a portfolio demo
+- Make the app understandable for a beginner developer
+
+Please do the following in order:
+
+STEP 1: Plan
+First, give me:
+- a concise technical architecture
+- recommended folder structure
+- database schema for Supabase
+- API endpoint list
+- a clear MVP implementation plan in phases
+
+STEP 2: Scaffold
+Then generate the initial project structure for:
+- frontend/
+- backend/
+- shared docs if needed
+
+STEP 3: Backend
+Implement FastAPI backend routes for:
+- auth-related integration helpers if needed
+- projects CRUD
+- paper search proxy endpoint
+- save paper to project
+- AI summarize / explain / quiz endpoints
+
+STEP 4: Frontend
+Implement a clean vanilla HTML/CSS/JS frontend with:
+- landing page
+- auth pages or auth modal
+- dashboard
+- project detail page
+- paper search UI
+- saved papers list
+- AI analysis panel
+
+STEP 5: Styling
+Use a modern blue + black/white design system:
+- white or very light background
+- deep blue accents
+- black / dark gray text
+- rounded cards
+- subtle shadows
+- clean buttons
+- responsive layout
+
+STEP 6: Docs
+Generate:
+- README.md
+- .env.example
+- setup instructions for local development
+- deployment notes for Vercel
+- Supabase setup instructions
+
+Code quality rules:
+- Keep functions small and readable
+- Name variables clearly
+- Avoid clever but confusing abstractions
+- Explain any non-trivial logic
+- Structure the code so I can explain it in an oral exam
+- Prefer clarity over complexity
+
+Product tone:
+LitLab should feel:
+- smart
+- trustworthy
+- academic but not intimidating
+- friendly to beginners
+- polished enough for a portfolio
+
+Deliverables:
+- full MVP code
+- setup instructions
+- clear explanation of where I should put my environment variables
+- notes on what parts I should manually customize
+
+When making implementation choices, prefer the simplest robust solution.
+Start with STEP 1 only.
+
+⸻
+
+Shorter Cursor Prompt
+Help me build an MVP called LitLab: a beginner-friendly AI-powered research assistant web app.
+
+Stack:
+- Frontend: HTML, CSS, vanilla JS
+- Backend: FastAPI
+- Database/Auth: Supabase
+- Deployment: Vercel
+- AI: OpenAI API
+
+Core MVP features:
+1. User auth with Supabase
+2. Create/manage research projects
+3. Choose project framework:
+   - IMRAD
+   - Review / Survey
+   - Theoretical Paper
+   - Case Study
+4. Search academic papers using a stable academic API like Semantic Scholar, OpenAlex, or arXiv
+5. Save papers to projects
+6. AI actions on saved papers:
+   - summarize
+   - explain for a beginner
+   - generate comprehension quiz questions
+7. Basic related-paper recommendation logic
+
+Design:
+- blue + black/white
+- modern, clean, minimal, beginner-friendly
+- portfolio-ready
+
+Requirements:
+- keep architecture simple and explainable
+- use environment variables for secrets
+- handle errors cleanly
+- avoid overengineering
+- generate clear folder structure, backend routes, frontend pages, database schema, and setup docs
+
+First, give me:
+- architecture
+- folder structure
+- Supabase schema
+- API routes
+- phased implementation plan
+
+Then start scaffolding the project.
+
+⸻
+
+Repo Setup Prompt for Cursor
+Use this after the first prompt if you want Cursor to start creating files.
+Now scaffold the LitLab project in this structure:
+
+litlab/
+  frontend/
+    index.html
+    dashboard.html
+    project.html
+    styles.css
+    app.js
+    auth.js
+    dashboard.js
+    project.js
+  backend/
+    main.py
+    requirements.txt
+    routes/
+    services/
+    models/
+    prompts/
+    utils/
+  README.md
+  .env.example
+  .gitignore
+
+Please:
+- create the initial files
+- write starter code
+- add placeholder comments where logic will be filled in
+- keep everything simple and clean
+- make sure the frontend can talk to FastAPI endpoints
+- prepare the backend for Supabase + OpenAI integration
+
+⸻
+
+Good follow-up prompts for Cursor
+1. Database schema
+Design the Supabase schema for LitLab. Keep it minimal but sufficient for the MVP. Include tables for:
+- user profiles
+- projects
+- saved papers
+- AI quiz attempts or AI outputs if needed
+
+Explain relationships and generate SQL.
+2. Framework guidance logic
+Implement a beginner-friendly research guidance system for these project types:
+- IMRAD
+- Review / Survey
+- Theoretical Paper
+- Case Study
+
+For each type, define clear sections, prompts, and checklist items that can be shown in the UI.
+Keep it practical and easy for students to use.
+3. Paper search integration
+Implement paper search for LitLab using one stable academic API.
+Choose the best option for an MVP between Semantic Scholar, OpenAlex, and arXiv.
+Explain why you chose it, then implement a FastAPI endpoint that returns normalized search results.
+4. AI prompt design
+Design robust OpenAI prompts for LitLab for these actions:
+- summarize a paper
+- explain a paper for a beginner
+- generate comprehension quiz questions
+
+The outputs should be structured, concise, useful, and suitable for beginner researchers.
+Store prompts in separate backend files if appropriate.
+5. UI polish
+Improve the LitLab frontend UI to feel portfolio-ready.
+Use a blue + black/white visual system, rounded cards, subtle shadows, elegant spacing, and clean typography.
+Do not overcomplicate it.
+
+⸻
+
+Best practical advice
+For your class project, tell Cursor to build this in phases:
+1. auth
+2. projects
+3. paper search
+4. save papers
+5. AI summarize/explain/quiz
+6. polish
+That will keep it realistic.
+If you want, I can next generate a complete README-ready product spec for LitLab that matches this prompt.
+
+
+--------------------------------------------------------------------------------
+
+
+In Cursor I continued by giving more detailed instructions on specific features, UI designs, and bug fixes.
+I wrote some of the HTML and CSS structure for the login and dashboard panels. I also modified the system prompt for the AI functions.
+
+
+To generate SPEC to build a mobile app after having the website running, I used the following prompt on Cursor:
+"I plan to create a mobile app for iOS based on this website, using the same database and the same login account. However, the functions will be a bit fewer, mainly on reading access. Help me write an MD document that can be directly executed by the Cursor agent who is in charge of this iOS development. Make sure to clearly explain all the interfaces and APIs."
